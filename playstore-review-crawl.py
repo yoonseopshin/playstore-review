@@ -1,4 +1,14 @@
-# app-review-final.py
+#!/usr/bin/env python3
+"""
+PlayStore Review Analysis Script
+
+This script collects Google Play Store reviews for a specified app,
+analyzes them, and generates visualization reports including:
+- CSV data export
+- Time series charts
+- Word clouds
+- Interactive HTML reports
+"""
 
 from google_play_scraper import reviews, Sort
 import pandas as pd
@@ -8,275 +18,343 @@ from wordcloud import WordCloud
 import re
 from datetime import datetime, timedelta
 import os
+import platform
+from typing import Tuple, Optional
+from jinja2 import Environment, FileSystemLoader
+
 
 # ===============================
-# 설정: 한글 폰트 경로 및 앱
+# Configuration
 # ===============================
-# Mac
-FONT_NAME = "AppleGothic"
-WORDCLOUD_FONT_PATH = "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
-# Windows
-# FONT_NAME = "Malgun Gothic"
-# WORDCLOUD_FONT_PATH = "C:/Windows/Fonts/malgun.ttf"
-# Linux
-# FONT_NAME = "NanumGothic"
-# WORDCLOUD_FONT_PATH = "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+class Config:
+    """Configuration settings for the review analysis"""
+    APP_PACKAGE = 'com.kakao.yellowid'
+    REVIEW_COUNT = 1000
+    DAYS = 7
+    OUTPUT_DIR = "./output"
+    
+    # Font settings by OS
+    FONT_SETTINGS = {
+        'darwin': {  # macOS
+            'name': "AppleGothic",
+            'path': "/System/Library/Fonts/Supplemental/AppleGothic.ttf"
+        },
+        'linux': {
+            'name': "NanumGothic", 
+            'path': "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"
+        }
+    }
 
-APP_PACKAGE = 'com.kakao.yellowid'
-REVIEW_COUNT = 1000   # 가져올 리뷰 수 (환경에 따라 늘릴 수 있음)
-DAYS = 7              # 최근 N일 (요구에 따라 변경)
 
-# 출력 디렉토리(선택)
-OUT_DIR = "."
-os.makedirs(OUT_DIR, exist_ok=True)
+def setup_environment() -> Tuple[str, str, str]:
+    """
+    Set up the environment and return font configuration
+    
+    Returns:
+        Tuple of (font_name, font_path, output_dir)
+    """
+    # Detect OS and set font
+    current_os = platform.system().lower()
+    font_config = Config.FONT_SETTINGS.get(current_os, Config.FONT_SETTINGS['linux'])
+    
+    # Create output directory
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Creating output directory: {Config.OUTPUT_DIR}")
+    os.makedirs(Config.OUTPUT_DIR, exist_ok=True)
+    
+    # Verify directory creation
+    if os.path.exists(Config.OUTPUT_DIR):
+        print(f"✓ Output directory created successfully: {os.path.abspath(Config.OUTPUT_DIR)}")
+    else:
+        print(f"✗ Failed to create output directory: {Config.OUTPUT_DIR}")
+        raise RuntimeError(f"Failed to create output directory: {Config.OUTPUT_DIR}")
+    
+    # Create .nojekyll file for GitHub Pages
+    nojekyll_path = os.path.join(Config.OUTPUT_DIR, ".nojekyll")
+    with open(nojekyll_path, "w") as f:
+        f.write("")
+    print(f"✓ .nojekyll file created: {nojekyll_path}")
+    
+    return font_config['name'], font_config['path'], Config.OUTPUT_DIR
 
-# ===============================
-# 날짜 범위
-# ===============================
-END_DATE = datetime.today().date() - timedelta(days=1)  # 어제 기준
-START_DATE = END_DATE - timedelta(days=DAYS - 1)
 
-print(f"최근 {DAYS}일({START_DATE} ~ {END_DATE}) 리뷰 수집 중...")
+def get_date_range() -> Tuple[datetime.date, datetime.date]:
+    """
+    Calculate the date range for review collection
+    
+    Returns:
+        Tuple of (start_date, end_date)
+    """
+    end_date = datetime.today().date() - timedelta(days=1)  # Based on yesterday
+    start_date = end_date - timedelta(days=Config.DAYS - 1)
+    
+    print(f"Collecting reviews from the last {Config.DAYS} days ({start_date} ~ {end_date})...")
+    return start_date, end_date
 
-# ===============================
-# 리뷰 수집 (google-play-scraper)
-# ===============================
-result, _ = reviews(
-    APP_PACKAGE,
-    lang='ko',
-    country='kr',
-    count=REVIEW_COUNT,
-    sort=Sort.NEWEST
-)
 
-# ===============================
-# DataFrame 정리
-# ===============================
-df = pd.DataFrame(result)
-# 필요한 컬럼만
-df = df[['userName', 'content', 'score', 'at']]
-df.rename(columns={'content': 'review'}, inplace=True)
-df['at'] = pd.to_datetime(df['at'])
+def collect_reviews() -> list:
+    """
+    Collect reviews from Google Play Store
+    
+    Returns:
+        List of review data
+    """
+    print("Fetching reviews from Google Play Store...")
+    result, _ = reviews(
+        Config.APP_PACKAGE,
+        lang='ko',
+        country='kr',
+        count=Config.REVIEW_COUNT,
+        sort=Sort.NEWEST
+    )
+    print(f"✓ Fetched {len(result)} reviews from Play Store")
+    return result
 
-# 최근 N일 필터링
-df = df[(df['at'].dt.date >= START_DATE) & (df['at'].dt.date <= END_DATE)]
-df.sort_values('at', inplace=True)
 
-if df.empty:
-    print(f"최근 {DAYS}일 리뷰가 없습니다.")
-    exit(0)
+def process_reviews(review_data: list, start_date: datetime.date, end_date: datetime.date) -> pd.DataFrame:
+    """
+    Process and filter review data
+    
+    Args:
+        review_data: Raw review data from Play Store
+        start_date: Start date for filtering
+        end_date: End date for filtering
+        
+    Returns:
+        Processed DataFrame
+    """
+    # Create DataFrame and clean up
+    df = pd.DataFrame(review_data)
+    df = df[['userName', 'content', 'score', 'at']]
+    df.rename(columns={'content': 'review'}, inplace=True)
+    df['at'] = pd.to_datetime(df['at'])
+    
+    # Filter for date range
+    df = df[(df['at'].dt.date >= start_date) & (df['at'].dt.date <= end_date)]
+    df.sort_values('at', inplace=True)
+    
+    if df.empty:
+        print(f"No reviews found for the last {Config.DAYS} days.")
+        return None
+        
+    print(f"✓ Processed {len(df)} reviews within date range")
+    return df
 
-# ===============================
-# CSV 저장
-# ===============================
-csv_file = os.path.join(OUT_DIR, f"user_reviews_summary_{START_DATE}_{END_DATE}.csv")
-df.to_csv(csv_file, index=False, encoding='utf-8-sig')
-print(f"CSV 저장 완료: {csv_file} (총 {len(df)}건)")
 
-# ===============================
-# 시계열 시각화 (이미지)
-# ===============================
-# 날짜 컬럼 생성
-df['date'] = df['at'].dt.date
-daily_score = df.groupby('date')['score'].mean().reset_index()
-daily_count = df.groupby('date').size().reset_index(name='count')
+def save_csv(df: pd.DataFrame, output_dir: str, start_date: datetime.date, end_date: datetime.date) -> str:
+    """
+    Save DataFrame to CSV file
+    
+    Args:
+        df: DataFrame to save
+        output_dir: Output directory path
+        start_date: Start date for filename
+        end_date: End date for filename
+        
+    Returns:
+        Path to saved CSV file
+    """
+    csv_file = os.path.join(output_dir, f"user_reviews_summary_{start_date}_{end_date}.csv")
+    df.to_csv(csv_file, index=False, encoding='utf-8-sig')
+    print(f"CSV saved successfully: {csv_file} (Total {len(df)} reviews)")
+    return csv_file
 
-sns.set(style="whitegrid")
-plt.figure(figsize=(12, 6))
-plt.plot(daily_score['date'], daily_score['score'], marker='o', label='평균 별점')
-plt.bar(daily_count['date'], daily_count['count'], alpha=0.3, label='리뷰 수', color='skyblue')
 
-plt.xlabel("날짜", fontname=FONT_NAME)
-plt.ylabel("평균 별점 / 리뷰 수", fontname=FONT_NAME)
-plt.title(f"최근 {DAYS}일 리뷰 요약 ({START_DATE} ~ {END_DATE})", fontname=FONT_NAME)
-plt.legend(prop={"family": FONT_NAME})
-plt.xticks(rotation=45)
-plt.tight_layout()
+def create_summary_chart(df: pd.DataFrame, font_name: str, output_dir: str, 
+                        start_date: datetime.date, end_date: datetime.date) -> str:
+    """
+    Create time series summary chart
+    
+    Args:
+        df: DataFrame with review data
+        font_name: Font name for chart
+        output_dir: Output directory path
+        start_date: Start date for title
+        end_date: End date for title
+        
+    Returns:
+        Path to saved chart image
+    """
+    # Prepare data
+    df['date'] = df['at'].dt.date
+    daily_score = df.groupby('date')['score'].mean().reset_index()
+    daily_count = df.groupby('date').size().reset_index(name='count')
+    
+    # Create chart
+    sns.set(style="whitegrid")
+    plt.figure(figsize=(12, 6))
+    plt.plot(daily_score['date'], daily_score['score'], marker='o', label='평균 별점')
+    plt.bar(daily_count['date'], daily_count['count'], alpha=0.3, label='리뷰 수', color='skyblue')
+    
+    plt.xlabel("날짜", fontname=font_name)
+    plt.ylabel("평균 별점 / 리뷰 수", fontname=font_name)
+    plt.title(f"최근 {Config.DAYS}일 리뷰 요약 ({start_date} ~ {end_date})", fontname=font_name)
+    plt.legend(prop={"family": font_name})
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    
+    # Save chart
+    summary_img = os.path.join(output_dir, f"review_summary_{start_date}_{end_date}.png")
+    plt.savefig(summary_img)
+    plt.close()
+    print(f"Review summary visualization image saved: {summary_img}")
+    return summary_img
 
-summary_img = os.path.join(OUT_DIR, f"review_summary_{START_DATE}_{END_DATE}.png")
-plt.savefig(summary_img)
-plt.close()
-print(f"리뷰 요약 시각화 이미지 저장 완료: {summary_img}")
 
-# ===============================
-# 워드클라우드 생성 (이미지)
-# ===============================
-text = " ".join(df['review'].astype(str))
-text = re.sub(r"[^가-힣a-zA-Z\s]", " ", text)
+def create_wordcloud(df: pd.DataFrame, font_path: str, output_dir: str,
+                    start_date: datetime.date, end_date: datetime.date) -> str:
+    """
+    Create word cloud from review text
+    
+    Args:
+        df: DataFrame with review data
+        font_path: Font path for word cloud
+        output_dir: Output directory path
+        start_date: Start date for filename
+        end_date: End date for filename
+        
+    Returns:
+        Path to saved word cloud image
+    """
+    # Prepare text
+    text = " ".join(df['review'].astype(str))
+    text = re.sub(r"[^가-힣a-zA-Z\s]", " ", text)
+    
+    # Generate word cloud
+    wordcloud = WordCloud(
+        font_path=font_path,
+        width=1200,
+        height=600,
+        background_color='white',
+        max_words=500
+    ).generate(text)
+    
+    # Save word cloud
+    plt.figure(figsize=(15, 7))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.tight_layout()
+    
+    wc_img = os.path.join(output_dir, f"review_wordcloud_{start_date}_{end_date}.png")
+    plt.savefig(wc_img)
+    plt.close()
+    print(f"Word cloud image saved: {wc_img}")
+    return wc_img
 
-wordcloud = WordCloud(
-    font_path=WORDCLOUD_FONT_PATH,
-    width=1200,
-    height=600,
-    background_color='white',
-    max_words=500
-).generate(text)
 
-plt.figure(figsize=(15, 7))
-plt.imshow(wordcloud, interpolation='bilinear')
-plt.axis('off')
-plt.tight_layout()
+def setup_jinja_environment() -> Environment:
+    """
+    Set up Jinja2 environment for template rendering
+    
+    Returns:
+        Jinja2 Environment instance
+    """
+    template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+    if not os.path.exists(template_dir):
+        os.makedirs(template_dir)
+    
+    env = Environment(loader=FileSystemLoader(template_dir))
+    return env
 
-wc_img = os.path.join(OUT_DIR, f"review_wordcloud_{START_DATE}_{END_DATE}.png")
-plt.savefig(wc_img)
-plt.close()
-print(f"워드클라우드 이미지 저장 완료: {wc_img}")
 
-# ===============================
-# HTML 보고서 생성
-# - date 컬럼 제거 (중복)
-# - at은 문자열(ISO)로 변환해 JS에서 안정적으로 정렬
-# - score와 at 헤더에 class="sortable" 추가
-# ===============================
-df_for_html = df.drop(columns=['date']).copy()
-# at 컬럼을 사람이 읽기 쉬운 포맷으로 (JS에서 Date로 파싱 가능)
-df_for_html['at'] = df_for_html['at'].dt.strftime('%Y-%m-%d %H:%M:%S')
+def generate_html_report(df: pd.DataFrame, output_dir: str, start_date: datetime.date, 
+                        end_date: datetime.date, summary_img: str, wc_img: str) -> str:
+    """
+    Generate responsive HTML report using Jinja2 templates
+    
+    Args:
+        df: DataFrame with review data
+        output_dir: Output directory path
+        start_date: Start date for report
+        end_date: End date for report
+        summary_img: Path to summary image
+        wc_img: Path to word cloud image
+        
+    Returns:
+        Path to generated HTML file
+    """
+    try:
+        # Setup Jinja2 environment
+        env = setup_jinja_environment()
+        template = env.get_template('report.html')
+        
+        # Prepare data for template
+        df_for_html = df.drop(columns=['date']).copy()
+        df_for_html['at'] = df_for_html['at'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Convert DataFrame to list of dictionaries for Jinja2
+        reviews_data = df_for_html.to_dict('records')
+        
+        # Calculate statistics
+        avg_rating = df['score'].mean()
+        total_reviews = len(df)
+        
+        # Template context
+        context = {
+            'start_date': start_date,
+            'end_date': end_date,
+            'summary_img': os.path.basename(summary_img),
+            'wordcloud_img': os.path.basename(wc_img),
+            'reviews': reviews_data,
+            'total_reviews': total_reviews,
+            'avg_rating': avg_rating,
+            'days': Config.DAYS
+        }
+        
+        # Render template
+        html_content = template.render(context)
+        
+        # Save HTML file
+        html_file = os.path.join(output_dir, f"review_report_{start_date}_{end_date}.html")
+        with open(html_file, "w", encoding="utf-8") as f:
+            f.write(html_content)
+        
+        print(f"HTML report generated successfully: {html_file}")
+        return html_file
+        
+    except Exception as e:
+        print(f"Error generating HTML report: {str(e)}")
+        raise
 
-table_html = df_for_html.to_html(index=False, escape=False)
-# pandas가 만든 <th>태그에 class 추가 (score, at)
-table_html = table_html.replace('<th>score</th>', '<th class="sortable">score</th>')
-table_html = table_html.replace('<th>at</th>', '<th class="sortable">at</th>')
 
-total_count = len(df_for_html)
+def main():
+    """
+    Main execution function
+    """
+    try:
+        print("=== PlayStore Review Analysis Started ===")
+        
+        # Step 1: Setup environment
+        font_name, font_path, output_dir = setup_environment()
+        
+        # Step 2: Get date range
+        start_date, end_date = get_date_range()
+        
+        # Step 3: Collect reviews
+        review_data = collect_reviews()
+        
+        # Step 4: Process reviews
+        df = process_reviews(review_data, start_date, end_date)
+        if df is None:
+            return
+        
+        # Step 5: Save CSV
+        save_csv(df, output_dir, start_date, end_date)
+        
+        # Step 6: Create visualizations
+        summary_img = create_summary_chart(df, font_name, output_dir, start_date, end_date)
+        wc_img = create_wordcloud(df, font_path, output_dir, start_date, end_date)
+        
+        # Step 7: Generate HTML report
+        generate_html_report(df, output_dir, start_date, end_date, summary_img, wc_img)
+        
+        print(f"✓ Review summary files for the last {Config.DAYS} days generated successfully!")
+        print("=== Analysis Complete ===")
+        
+    except Exception as e:
+        print(f"✗ Error occurred: {str(e)}")
+        raise
 
-# 안전한 플레이스홀더 방식으로 HTML 구성
-html_template = """
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>PlayStore Review Report ([[START]] ~ [[END]])</title>
-<style>
-body { font-family: AppleGothic, "Malgun Gothic", "NanumGothic", sans-serif; margin: 20px; }
-h1 { text-align: center; }
-img { display: block; margin: 20px auto; max-width: 90%; }
-table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
-th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
-th { background-color: #f7f7f7; }
-th.sortable { cursor: pointer; position: relative; padding-right: 24px; }
-th.sortable::after { content: '⇅'; position: absolute; right: 8px; font-size: 12px; color: #888; }
-th.sortable[aria-sort="ascending"]::after { content: '▲'; color: #333; }
-th.sortable[aria-sort="descending"]::after { content: '▼'; color: #333; }
-.preview { max-width: 1200px; margin: 0 auto; }
-.count { font-weight: bold; margin: 10px 0; }
-</style>
-</head>
-<body>
-<div class="preview">
-<h1>Review Report ([[START]] ~ [[END]])</h1>
 
-<h2>리뷰 요약 시각화</h2>
-<img src="[[SUMMARY_IMG]]" alt="리뷰 요약">
-
-<h2>워드클라우드</h2>
-<img src="[[WC_IMG]]" alt="워드클라우드">
-
-<h2>리뷰 상세 <span class="count">(총 [[COUNT]]건)</span></h2>
-[[TABLE_HTML]]
-</div>
-<style>
-th.sortable {
-    cursor: pointer;
-    position: relative;
-    padding-right: 24px;
-}
-th.sortable::after { content: '⇅'; position: absolute; right: 8px; font-size: 12px; color: #888; }
-th.sortable[aria-sort="ascending"]::after { content: '▲'; color: #333; }
-th.sortable[aria-sort="descending"]::after { content: '▼'; color: #333; }
-
-/* 리뷰 toggle 스타일 */
-td.review {
-    max-width: 600px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-.review-short { display: inline; }
-.review-full { display: none; }
-.toggle-btn {
-    color: blue;
-    cursor: pointer;
-    font-size: 12px;
-    margin-left: 4px;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.querySelector('table');
-    if (!table) return;
-    const tbody = table.tBodies[0];
-    if (!tbody) return;
-
-    const numRegex = /^\s*-?[\d,]+(\.\d+)?\s*$/;
-
-    // === sortable 기능 ===
-    const headers = Array.from(table.querySelectorAll('th.sortable'));
-    headers.forEach(th => {
-        let asc = true; // 초기 오름차순
-        th.addEventListener('click', function() {
-            const colIndex = th.cellIndex;
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-
-            const headerText = (th.textContent || '').trim().toLowerCase();
-
-            rows.sort((a, b) => {
-                const aText = (a.children[colIndex]?.textContent || '').trim();
-                const bText = (b.children[colIndex]?.textContent || '').trim();
-
-                if(headerText === 'at') {
-                    const da = Date.parse(aText) || 0;
-                    const db = Date.parse(bText) || 0;
-                    return (da - db) * (asc ? 1 : -1);
-                } else if(headerText === 'score') {
-                    const aClean = aText.replace(/,/g,'');
-                    const bClean = bText.replace(/,/g,'');
-                    const aIsNum = numRegex.test(aText);
-                    const bIsNum = numRegex.test(bText);
-                    if(aIsNum && bIsNum){
-                        const na = parseFloat(aClean);
-                        const nb = parseFloat(bClean);
-                        return (na - nb) * (asc ? 1 : -1);
-                    }
-                    return aText.localeCompare(bText, 'ko') * (asc ? 1 : -1);
-                } else if(headerText === 'review') {
-                    // 글자 수 기준 정렬
-                    return (aText.length - bText.length) * (asc ? 1 : -1);
-                } else {
-                    return aText.localeCompare(bText, 'ko') * (asc ? 1 : -1);
-                }
-            });
-
-            // 정렬된 순서로 tbody에 재삽입
-            rows.forEach(r => tbody.appendChild(r));
-
-            // 아이콘 표시
-            th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
-            headers.forEach(h => { if(h!==th) h.removeAttribute('aria-sort'); });
-
-            // 다음 클릭에서 반대 방향
-            asc = !asc;
-        });
-    });
-});
-</script>
-
-</body>
-</html>
-"""
-
-# 치환
-html_content = (html_template
-                .replace('[[START]]', str(START_DATE))
-                .replace('[[END]]', str(END_DATE))
-                .replace('[[SUMMARY_IMG]]', os.path.basename(summary_img))
-                .replace('[[WC_IMG]]', os.path.basename(wc_img))
-                .replace('[[TABLE_HTML]]', table_html)
-                .replace('[[COUNT]]', str(total_count))
-               )
-
-html_file = os.path.join(OUT_DIR, f"review_report_{START_DATE}_{END_DATE}.html")
-with open(html_file, "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print(f"HTML 보고서 생성 완료: {html_file}")
-print(f"최근 {DAYS}일간 리뷰 요약 파일 생성 완료!")
+if __name__ == "__main__":
+    main()

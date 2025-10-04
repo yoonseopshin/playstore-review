@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlayStore Review Report ({{ start_date }} ~ {{ end_date }})</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .card-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        /* Images */
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 24px;
+            transition: background-color 0.2s;
+        }
+
+        th.sortable:hover {
+            background-color: #e9ecef;
+        }
+
+        th.sortable::after {
+            content: '⇅';
+            position: absolute;
+            right: 8px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        th.sortable[aria-sort="ascending"]::after {
+            content: '▲';
+            color: #007bff;
+        }
+
+        th.sortable[aria-sort="descending"]::after {
+            content: '▼';
+            color: #007bff;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Review Content */
+        .review-content {
+            max-width: 400px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        /* Stats */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Count Badge */
+        .count-badge {
+            background: #007bff;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header .subtitle {
+                font-size: 1rem;
+            }
+
+            .card-header, .card-body {
+                padding: 15px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 15px;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px 4px;
+            }
+
+            .review-content {
+                max-width: 200px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 20px 0;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .card-header h2 {
+                font-size: 1.2rem;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .review-content {
+                max-width: 150px;
+            }
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>📱 PlayStore Review Report</h1>
+            <div class="subtitle">{{ start_date }} ~ {{ end_date }}</div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_reviews }}</div>
+                <div class="stat-label">총 리뷰 수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ avg_rating|round(1) }}</div>
+                <div class="stat-label">평균 별점</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ days }}</div>
+                <div class="stat-label">분석 기간 (일)</div>
+            </div>
+        </div>
+
+        <!-- Summary Chart -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📊 리뷰 요약 시각화</h2>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <img src="{{ summary_img }}" alt="리뷰 요약 차트" loading="lazy">
+                </div>
+            </div>
+        </div>
+
+        <!-- Word Cloud -->
+        <div class="card">
+            <div class="card-header">
+                <h2>☁️ 워드클라우드</h2>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <img src="{{ wordcloud_img }}" alt="워드클라우드" loading="lazy">
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Details -->
+        <div class="card">
+            <div class="card-header">
+                <h2>📝 리뷰 상세 <span class="count-badge">총 {{ total_reviews }}건</span></h2>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table id="reviewTable">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-column="userName">사용자명</th>
+                                <th class="sortable" data-column="review">리뷰 내용</th>
+                                <th class="sortable" data-column="score">별점</th>
+                                <th class="sortable" data-column="at">작성일시</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for review in reviews %}
+                            <tr>
+                                <td>{{ review.userName }}</td>
+                                <td class="review-content">{{ review.review }}</td>
+                                <td>
+                                    <span style="color: #ffc107;">
+                                        {% for i in range(review.score) %}★{% endfor %}
+                                        {% for i in range(5 - review.score) %}☆{% endfor %}
+                                    </span>
+                                    {{ review.score }}
+                                </td>
+                                <td>{{ review.at }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.getElementById('reviewTable');
+            if (!table) return;
+            
+            const tbody = table.querySelector('tbody');
+            const headers = table.querySelectorAll('th.sortable');
+            
+            headers.forEach(header => {
+                let ascending = true;
+                
+                header.addEventListener('click', function() {
+                    const column = this.dataset.column;
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                    
+                    // Clear other sort indicators
+                    headers.forEach(h => {
+                        if (h !== this) h.removeAttribute('aria-sort');
+                    });
+                    
+                    // Sort rows
+                    rows.sort((a, b) => {
+                        let aVal, bVal;
+                        
+                        switch(column) {
+                            case 'userName':
+                                aVal = a.cells[0].textContent.trim();
+                                bVal = b.cells[0].textContent.trim();
+                                break;
+                            case 'review':
+                                aVal = a.cells[1].textContent.trim().length;
+                                bVal = b.cells[1].textContent.trim().length;
+                                break;
+                            case 'score':
+                                aVal = parseInt(a.cells[2].textContent.trim().split(' ').pop());
+                                bVal = parseInt(b.cells[2].textContent.trim().split(' ').pop());
+                                break;
+                            case 'at':
+                                aVal = new Date(a.cells[3].textContent.trim());
+                                bVal = new Date(b.cells[3].textContent.trim());
+                                break;
+                            default:
+                                aVal = a.cells[0].textContent.trim();
+                                bVal = b.cells[0].textContent.trim();
+                        }
+                        
+                        if (column === 'review' || column === 'score') {
+                            return ascending ? aVal - bVal : bVal - aVal;
+                        } else if (column === 'at') {
+                            return ascending ? aVal - bVal : bVal - aVal;
+                        } else {
+                            return ascending ? 
+                                aVal.localeCompare(bVal, 'ko') : 
+                                bVal.localeCompare(aVal, 'ko');
+                        }
+                    });
+                    
+                    // Re-append sorted rows
+                    rows.forEach(row => tbody.appendChild(row));
+                    
+                    // Update sort indicator
+                    this.setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
+                    ascending = !ascending;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
