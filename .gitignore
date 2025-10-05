@@ -188,4 +188,4 @@ pip-selfcheck.json
 # End of https://www.toptal.com/developers/gitignore/api/python,venv
 
 # Project specific
-# output/  # Commented out to allow reading output files for debugging
+output/  # Commented out to allow reading output files for debugging
