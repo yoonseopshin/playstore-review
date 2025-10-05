@@ -296,6 +296,12 @@
                 <div class="stat-number">{{ days }}</div>
                 <div class="stat-label">분석 기간 (일)</div>
             </div>
+            {% if has_topics and topic_summary.total_topics %}
+            <div class="stat-card">
+                <div class="stat-number">{{ topic_summary.total_topics }}</div>
+                <div class="stat-label">발견된 주제 수</div>
+            </div>
+            {% endif %}
         </div>
 
         <!-- Summary Chart -->
@@ -322,6 +328,48 @@
             </div>
         </div>
 
+        <!-- Topic Analysis -->
+        {% if has_topics and topic_summary.topic_distribution %}
+        <div class="card">
+            <div class="card-header">
+                <h2>🎯 주제 분석 (BERTopic)</h2>
+            </div>
+            <div class="card-body">
+                {% if topic_img %}
+                <div class="chart-container">
+                    <img src="{{ topic_img }}" alt="주제 분포" loading="lazy">
+                </div>
+                {% else %}
+                <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="color: #6c757d; margin: 0;">📊 주제 분포 차트를 생성할 수 없었습니다</p>
+                    <small style="color: #6c757d;">아래 텍스트 분포를 참고해주세요</small>
+                </div>
+                {% endif %}
+                
+                <div style="margin-top: 20px;">
+                    <h3 style="font-size: 1.2rem; margin-bottom: 15px; color: #495057;">주제별 리뷰 분포</h3>
+                    <div class="topic-list">
+                        {% for topic, count in topic_summary.topic_distribution.items() %}
+                        <div class="topic-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; margin-bottom: 8px; background: #fff; border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <span style="font-weight: 500; color: #495057;">{{ topic }}</span>
+                            <span class="count-badge" style="background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem;">{{ count }}건</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Topic insights -->
+                    <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                        <h4 style="margin: 0 0 10px 0; color: #1976d2; font-size: 1rem;">💡 주제 분석 인사이트</h4>
+                        <p style="margin: 0; color: #1976d2; font-size: 0.9rem;">
+                            총 <strong>{{ topic_summary.total_topics }}개</strong>의 주요 주제가 발견되었습니다. 
+                            각 주제는 리뷰 내용의 유사성을 기반으로 AI가 자동 분류한 결과입니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Review Details -->
         <div class="card">
             <div class="card-header">
@@ -329,12 +377,15 @@
             </div>
             <div class="card-body">
                 <div class="table-container">
-                    <table id="reviewTable">
+                    <table id="reviewTable" data-has-topics="{% if has_topics %}true{% else %}false{% endif %}">
                         <thead>
                             <tr>
                                 <th class="sortable" data-column="userName">사용자명</th>
                                 <th class="sortable" data-column="review">리뷰 내용</th>
                                 <th class="sortable" data-column="score">별점</th>
+                                {% if has_topics %}
+                                <th class="sortable" data-column="topic_label">주제</th>
+                                {% endif %}
                                 <th class="sortable" data-column="at">작성일시</th>
                             </tr>
                         </thead>
@@ -350,6 +401,13 @@
                                     </span>
                                     {{ review.score }}
                                 </td>
+                                {% if has_topics %}
+                                <td>
+                                    <span class="topic-tag" style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">
+                                        {{ review.topic_label or '기타' }}
+                                    </span>
+                                </td>
+                                {% endif %}
                                 <td>{{ review.at }}</td>
                             </tr>
                             {% endfor %}
@@ -365,6 +423,7 @@
             const table = document.getElementById('reviewTable');
             if (!table) return;
             
+            const hasTopics = table.dataset.hasTopics === 'true';
             const tbody = table.querySelector('tbody');
             const headers = table.querySelectorAll('th.sortable');
             
@@ -397,9 +456,16 @@
                                 aVal = parseInt(a.cells[2].textContent.trim().split(' ').pop());
                                 bVal = parseInt(b.cells[2].textContent.trim().split(' ').pop());
                                 break;
+                            case 'topic_label':
+                                if (hasTopics) {
+                                    aVal = a.cells[3].textContent.trim();
+                                    bVal = b.cells[3].textContent.trim();
+                                }
+                                break;
                             case 'at':
-                                aVal = new Date(a.cells[3].textContent.trim());
-                                bVal = new Date(b.cells[3].textContent.trim());
+                                const dateColIndex = hasTopics ? 4 : 3;
+                                aVal = new Date(a.cells[dateColIndex].textContent.trim());
+                                bVal = new Date(b.cells[dateColIndex].textContent.trim());
                                 break;
                             default:
                                 aVal = a.cells[0].textContent.trim();
