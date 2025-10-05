@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
-PlayStore Review Analysis Script
+Multi-Platform Review Analysis Script
 
 This script collects Google Play Store reviews for a specified app,
 analyzes them, and generates visualization reports including:
 - CSV data export
 - Time series charts
 - Word clouds
-- Interactive HTML reports
+- Interactive HTML reports with platform comparison
+- Topic modeling analysis
 """
 
 from google_play_scraper import reviews, Sort
+import feedparser
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -40,7 +42,16 @@ import json
 # ===============================
 class Config:
     """Configuration settings for the review analysis"""
-    APP_PACKAGE = 'com.kakao.yellowid'
+    # Google Play Store settings
+    PLAYSTORE_APP_PACKAGE = 'com.kakao.yellowid'
+    
+    # Apple App Store settings (RSS)
+    APPSTORE_APP_ID = '990571676' 
+    
+    @classmethod
+    def get_appstore_rss_url(cls):
+        return f'https://itunes.apple.com/kr/rss/customerreviews/id={cls.APPSTORE_APP_ID}/sortby=mostrecent/xml'
+    
     REVIEW_COUNT = 1000
     DAYS = 7
     OUTPUT_DIR = "./output"
@@ -104,40 +115,190 @@ def get_date_range() -> Tuple[datetime.date, datetime.date]:
     return start_date, end_date
 
 
-def collect_reviews() -> list:
+def collect_playstore_reviews() -> list:
     """
     Collect reviews from Google Play Store
     
     Returns:
-        List of review data
+        List of review data with platform information
     """
     print("Fetching reviews from Google Play Store...")
-    result, _ = reviews(
-        Config.APP_PACKAGE,
-        lang='ko',
-        country='kr',
-        count=Config.REVIEW_COUNT,
-        sort=Sort.NEWEST
-    )
-    print(f"✓ Fetched {len(result)} reviews from Play Store")
-    return result
+    try:
+        result, _ = reviews(
+            Config.PLAYSTORE_APP_PACKAGE,
+            lang='ko',
+            country='kr',
+            count=Config.REVIEW_COUNT,
+            sort=Sort.NEWEST
+        )
+        # Add platform information
+        for review in result:
+            review['platform'] = 'Google Play Store'
+        print(f"✓ Fetched {len(result)} reviews from Play Store")
+        return result
+    except Exception as e:
+        print(f"❌ Error fetching Play Store reviews: {e}")
+        return []
+
+
+def collect_appstore_reviews() -> list:
+    """
+    Collect reviews from Apple App Store using RSS feed with multiple pages
+    
+    Returns:
+        List of review data with platform information
+    """
+    print("Fetching reviews from Apple App Store (RSS)...")
+    try:
+        all_results = []
+        
+        # Try to get more reviews by using different RSS endpoints
+        # Apple RSS feeds support different sorting and page parameters
+        rss_urls = [
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/sortby=mostrecent/xml',
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/sortby=mostrelevant/xml',
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/page=1/sortby=mostrecent/xml',
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/page=2/sortby=mostrecent/xml',
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/page=3/sortby=mostrecent/xml',
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/page=4/sortby=mostrecent/xml',
+            f'https://itunes.apple.com/kr/rss/customerreviews/id={Config.APPSTORE_APP_ID}/page=5/sortby=mostrecent/xml'
+        ]
+        
+        seen_reviews = set()  # To avoid duplicates
+        
+        for i, rss_url in enumerate(rss_urls):
+            try:
+                print(f"  Fetching from RSS page {i+1}...")
+                
+                # Parse RSS feed
+                feed = feedparser.parse(rss_url)
+                
+                if feed.bozo and i == 0:  # Only warn for first URL
+                    print(f"⚠️  RSS feed parsing warning: {feed.bozo_exception}")
+                
+                page_results = []
+                for entry in feed.entries:
+                    try:
+                        # Extract review data from RSS entry
+                        
+                        # Parse rating from title (usually format: "★★★★☆ - Title")
+                        title = entry.get('title', '')
+                        rating = 0
+                        if '★' in title:
+                            rating = title.count('★')
+                        
+                        # Get review content
+                        content = ''
+                        if hasattr(entry, 'content') and entry.content:
+                            content = entry.content[0].value if isinstance(entry.content, list) else entry.content
+                        elif hasattr(entry, 'summary'):
+                            content = entry.summary
+                        
+                        # Clean content (remove HTML tags if any)
+                        content = re.sub(r'<[^>]+>', '', content) if content else ''
+                        
+                        # Get author name
+                        author = entry.get('author', 'Anonymous')
+                        
+                        # Get date
+                        date = datetime.now()
+                        if hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                            date = datetime(*entry.updated_parsed[:6])
+                        elif hasattr(entry, 'published_parsed') and entry.published_parsed:
+                            date = datetime(*entry.published_parsed[:6])
+                        
+                        # Create unique identifier to avoid duplicates
+                        review_id = f"{author}_{content[:50]}_{date.strftime('%Y%m%d')}"
+                        
+                        if review_id not in seen_reviews:
+                            seen_reviews.add(review_id)
+                            page_results.append({
+                                'userName': author,
+                                'content': content,
+                                'score': rating,
+                                'at': date,
+                                'platform': 'Apple App Store'
+                            })
+                        
+                    except Exception as e:
+                        print(f"⚠️  Error parsing RSS entry: {e}")
+                        continue
+                
+                all_results.extend(page_results)
+                print(f"    ✓ Got {len(page_results)} new reviews from page {i+1}")
+                
+                # If no new reviews found, stop trying more pages
+                if len(page_results) == 0 and i > 0:
+                    print(f"    No more reviews found, stopping at page {i+1}")
+                    break
+                    
+            except Exception as e:
+                print(f"⚠️  Error fetching RSS page {i+1}: {e}")
+                continue
+        
+        print(f"✓ Fetched total {len(all_results)} unique reviews from App Store RSS")
+        return all_results
+        
+    except Exception as e:
+        print(f"❌ Error fetching App Store RSS reviews: {e}")
+        return []
+
+
+def collect_all_reviews() -> list:
+    """
+    Collect reviews from both platforms
+    
+    Returns:
+        Combined list of review data from both platforms
+    """
+    print("=== Starting multi-platform review collection ===")
+    
+    # Collect from both platforms
+    playstore_reviews = collect_playstore_reviews()
+    appstore_reviews = collect_appstore_reviews()
+    
+    # Combine results
+    all_reviews = playstore_reviews + appstore_reviews
+    
+    total_count = len(all_reviews)
+    playstore_count = len(playstore_reviews)
+    appstore_count = len(appstore_reviews)
+    
+    print(f"\n📊 Collection Summary:")
+    print(f"   • Google Play Store: {playstore_count} reviews")
+    print(f"   • Apple App Store: {appstore_count} reviews")
+    print(f"   • Total: {total_count} reviews")
+    
+    return all_reviews
 
 
 def process_reviews(review_data: list, start_date: datetime.date, end_date: datetime.date) -> pd.DataFrame:
     """
-    Process and filter review data
+    Process and filter review data from multiple platforms
     
     Args:
-        review_data: Raw review data from Play Store
+        review_data: Raw review data from both platforms
         start_date: Start date for filtering
         end_date: End date for filtering
         
     Returns:
-        Processed DataFrame
+        Processed DataFrame with platform information
     """
+    if not review_data:
+        print("No review data to process.")
+        return None
+        
     # Create DataFrame and clean up
     df = pd.DataFrame(review_data)
-    df = df[['userName', 'content', 'score', 'at']]
+    
+    # Ensure we have the required columns
+    required_columns = ['userName', 'content', 'score', 'at', 'platform']
+    missing_columns = [col for col in required_columns if col not in df.columns]
+    if missing_columns:
+        print(f"❌ Missing required columns: {missing_columns}")
+        return None
+    
+    df = df[required_columns]
     df.rename(columns={'content': 'review'}, inplace=True)
     df['at'] = pd.to_datetime(df['at'])
     
@@ -148,8 +309,13 @@ def process_reviews(review_data: list, start_date: datetime.date, end_date: date
     if df.empty:
         print(f"No reviews found for the last {Config.DAYS} days.")
         return None
+    
+    # Print platform breakdown
+    platform_counts = df['platform'].value_counts()
+    print(f"\n✓ Processed {len(df)} reviews within date range:")
+    for platform, count in platform_counts.items():
+        print(f"   • {platform}: {count} reviews")
         
-    print(f"✓ Processed {len(df)} reviews within date range")
     return df
 
 
@@ -175,10 +341,10 @@ def save_csv(df: pd.DataFrame, output_dir: str, start_date: datetime.date, end_d
 def create_summary_chart(df: pd.DataFrame, font_name: str, output_dir: str, 
                         start_date: datetime.date, end_date: datetime.date) -> str:
     """
-    Create time series summary chart
+    Create time series summary chart with platform comparison
     
     Args:
-        df: DataFrame with review data
+        df: DataFrame with review data including platform info
         font_name: Font name for chart
         output_dir: Output directory path
         start_date: Start date for title
@@ -189,27 +355,76 @@ def create_summary_chart(df: pd.DataFrame, font_name: str, output_dir: str,
     """
     # Prepare data
     df['date'] = df['at'].dt.date
-    daily_score = df.groupby('date')['score'].mean().reset_index()
-    daily_count = df.groupby('date').size().reset_index(name='count')
     
-    # Create chart
+    # Create figure with subplots
     sns.set(style="whitegrid")
-    plt.figure(figsize=(12, 6))
-    plt.plot(daily_score['date'], daily_score['score'], marker='o', label='평균 별점')
-    plt.bar(daily_count['date'], daily_count['count'], alpha=0.3, label='리뷰 수', color='skyblue')
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
     
-    plt.xlabel("날짜", fontname=font_name)
-    plt.ylabel("평균 별점 / 리뷰 수", fontname=font_name)
-    plt.title(f"최근 {Config.DAYS}일 리뷰 요약 ({start_date} ~ {end_date})", fontname=font_name)
-    plt.legend(prop={"family": font_name})
-    plt.xticks(rotation=45)
+    # Chart 1: Daily average scores by platform
+    if 'platform' in df.columns:
+        daily_score_platform = df.groupby(['date', 'platform'])['score'].mean().reset_index()
+        
+        for platform in df['platform'].unique():
+            platform_data = daily_score_platform[daily_score_platform['platform'] == platform]
+            color = '#1f77b4' if 'Google' in platform else '#ff7f0e'
+            ax1.plot(platform_data['date'], platform_data['score'], 
+                    marker='o', label=f'{platform} 평균 별점', color=color, linewidth=2)
+    else:
+        daily_score = df.groupby('date')['score'].mean().reset_index()
+        ax1.plot(daily_score['date'], daily_score['score'], marker='o', label='평균 별점')
+    
+    ax1.set_xlabel("날짜", fontname=font_name)
+    ax1.set_ylabel("평균 별점", fontname=font_name)
+    ax1.set_title(f"플랫폼별 일일 평균 별점 ({start_date} ~ {end_date})", fontname=font_name, fontsize=14, fontweight='bold')
+    ax1.legend(prop={"family": font_name})
+    ax1.tick_params(axis='x', rotation=45)
+    ax1.grid(True, alpha=0.3)
+    
+    # Chart 2: Daily review counts by platform
+    if 'platform' in df.columns:
+        daily_count_platform = df.groupby(['date', 'platform']).size().reset_index(name='count')
+        
+        # Create stacked bar chart
+        platforms = df['platform'].unique()
+        dates = sorted(df['date'].unique())
+        
+        bottom = None
+        colors = ['#1f77b4', '#ff7f0e']
+        
+        for i, platform in enumerate(platforms):
+            platform_counts = []
+            for date in dates:
+                count = daily_count_platform[
+                    (daily_count_platform['date'] == date) & 
+                    (daily_count_platform['platform'] == platform)
+                ]['count'].sum()
+                platform_counts.append(count)
+            
+            ax2.bar(dates, platform_counts, label=f'{platform} 리뷰 수', 
+                   bottom=bottom, color=colors[i % len(colors)], alpha=0.8)
+            
+            if bottom is None:
+                bottom = platform_counts
+            else:
+                bottom = [b + c for b, c in zip(bottom, platform_counts)]
+    else:
+        daily_count = df.groupby('date').size().reset_index(name='count')
+        ax2.bar(daily_count['date'], daily_count['count'], alpha=0.8, label='리뷰 수', color='skyblue')
+    
+    ax2.set_xlabel("날짜", fontname=font_name)
+    ax2.set_ylabel("리뷰 수", fontname=font_name)
+    ax2.set_title(f"플랫폼별 일일 리뷰 수 ({start_date} ~ {end_date})", fontname=font_name, fontsize=14, fontweight='bold')
+    ax2.legend(prop={"family": font_name})
+    ax2.tick_params(axis='x', rotation=45)
+    ax2.grid(True, alpha=0.3)
+    
     plt.tight_layout()
     
     # Save chart
-    summary_img = os.path.join(output_dir, f"review_summary_{start_date}_{end_date}.png")
-    plt.savefig(summary_img)
+    summary_img = os.path.join(output_dir, f"multi_platform_summary_{start_date}_{end_date}.png")
+    plt.savefig(summary_img, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Review summary visualization image saved: {summary_img}")
+    print(f"Multi-platform summary visualization saved: {summary_img}")
     return summary_img
 
 
@@ -596,9 +811,19 @@ def generate_html_report(df: pd.DataFrame, output_dir: str, start_date: datetime
         # Convert DataFrame to list of dictionaries for Jinja2
         reviews_data = df_for_html.to_dict('records')
         
-        # Calculate statistics
+        # Calculate overall statistics
         avg_rating = df['score'].mean()
         total_reviews = len(df)
+        
+        # Calculate platform-specific statistics
+        platform_stats = {}
+        if 'platform' in df.columns:
+            for platform in df['platform'].unique():
+                platform_df = df[df['platform'] == platform]
+                platform_stats[platform] = {
+                    'count': len(platform_df),
+                    'avg_rating': platform_df['score'].mean()
+                }
         
         # Template context
         context = {
@@ -612,7 +837,8 @@ def generate_html_report(df: pd.DataFrame, output_dir: str, start_date: datetime
             'days': Config.DAYS,
             'has_topics': 'topic_label' in df.columns,
             'topic_summary': topic_summary or {},
-            'topic_img': os.path.basename(topic_img) if topic_img else ""
+            'topic_img': os.path.basename(topic_img) if topic_img else "",
+            'platform_stats': platform_stats
         }
         
         # Render template
@@ -636,7 +862,7 @@ def main():
     Main execution function
     """
     try:
-        print("=== PlayStore Review Analysis Started ===")
+        print("=== Multi-Platform Review Analysis Started ===")
         
         # Step 1: Setup environment
         font_name, font_path, output_dir = setup_environment()
@@ -644,8 +870,8 @@ def main():
         # Step 2: Get date range
         start_date, end_date = get_date_range()
         
-        # Step 3: Collect reviews
-        review_data = collect_reviews()
+        # Step 3: Collect reviews from both platforms
+        review_data = collect_all_reviews()
         
         # Step 4: Process reviews
         df = process_reviews(review_data, start_date, end_date)

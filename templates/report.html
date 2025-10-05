@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PlayStore Review Report ({{ start_date }} ~ {{ end_date }})</title>
+    <title>Multi-Platform Review Report ({{ start_date }} ~ {{ end_date }})</title>
     <style>
         /* Reset and Base Styles */
         * {
@@ -194,6 +194,67 @@
             font-size: 0.9rem;
             font-weight: 500;
         }
+        
+        /* Tab Styles */
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .tab-button.active {
+            background: white;
+            color: #007bff;
+            border-bottom-color: #007bff;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Platform Badge */
+        .platform-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .platform-google {
+            background: #4285f4;
+            color: white;
+        }
+        
+        .platform-apple {
+            background: #000000;
+            color: white;
+        }
 
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -278,11 +339,14 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>📱 PlayStore Review Report</h1>
+            <h1>📱 Multi-Platform Review Report</h1>
             <div class="subtitle">{{ start_date }} ~ {{ end_date }}</div>
+            <div style="margin-top: 10px; font-size: 0.9rem; opacity: 0.8;">
+                🤖 Google Play Store & 🍎 Apple App Store 리뷰 통합 분석
+            </div>
         </div>
 
-        <!-- Statistics -->
+        <!-- Overall Statistics -->
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-number">{{ total_reviews }}</div>
@@ -296,13 +360,40 @@
                 <div class="stat-number">{{ days }}</div>
                 <div class="stat-label">분석 기간 (일)</div>
             </div>
-            {% if has_topics and topic_summary.total_topics %}
+            {% if platform_stats %}
             <div class="stat-card">
-                <div class="stat-number">{{ topic_summary.total_topics }}</div>
-                <div class="stat-label">발견된 주제 수</div>
+                <div class="stat-number">{{ platform_stats|length }}</div>
+                <div class="stat-label">분석 플랫폼 수</div>
             </div>
             {% endif %}
         </div>
+        
+        <!-- Platform Statistics -->
+        {% if platform_stats %}
+        <div class="card">
+            <div class="card-header">
+                <h2>📊 플랫폼별 통계</h2>
+            </div>
+            <div class="card-body">
+                <div class="stats">
+                    {% for platform, stats in platform_stats.items() %}
+                    <div class="stat-card">
+                        <div style="margin-bottom: 10px;">
+                            <span class="platform-badge {% if 'Google' in platform %}platform-google{% else %}platform-apple{% endif %}">
+                                {{ platform }}
+                            </span>
+                        </div>
+                        <div class="stat-number">{{ stats.count }}</div>
+                        <div class="stat-label">리뷰 수</div>
+                        <div style="margin-top: 8px; font-size: 0.9rem; color: #6c757d;">
+                            평균 별점: <strong>{{ stats.avg_rating|round(1) }}</strong>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Summary Chart -->
         <div class="card">
@@ -370,125 +461,234 @@
         </div>
         {% endif %}
 
-        <!-- Review Details -->
+        <!-- Platform Tabs for Reviews -->
         <div class="card">
             <div class="card-header">
                 <h2>📝 리뷰 상세 <span class="count-badge">총 {{ total_reviews }}건</span></h2>
             </div>
             <div class="card-body">
-                <div class="table-container">
-                    <table id="reviewTable" data-has-topics="{% if has_topics %}true{% else %}false{% endif %}">
-                        <thead>
-                            <tr>
-                                <th class="sortable" data-column="userName">사용자명</th>
-                                <th class="sortable" data-column="review">리뷰 내용</th>
-                                <th class="sortable" data-column="score">별점</th>
-                                {% if has_topics %}
-                                <th class="sortable" data-column="topic_label">주제</th>
+                <!-- Tab Navigation -->
+                <div class="tabs">
+                    <button class="tab-button active" onclick="switchTab(event, 'all-reviews')">📊 전체 리뷰</button>
+                    <button class="tab-button" onclick="switchTab(event, 'google-reviews')">🤖 Google Play Store</button>
+                    <button class="tab-button" onclick="switchTab(event, 'apple-reviews')">🍎 Apple App Store</button>
+                </div>
+                
+                <!-- All Reviews Tab -->
+                <div id="all-reviews" class="tab-content active">
+                    <div class="table-container">
+                        <table class="reviewTable" data-has-topics="{% if has_topics %}true{% else %}false{% endif %}">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="userName">사용자명</th>
+                                    <th class="sortable" data-column="platform">플랫폼</th>
+                                    <th class="sortable" data-column="review">리뷰 내용</th>
+                                    <th class="sortable" data-column="score">별점</th>
+                                    {% if has_topics %}
+                                    <th class="sortable" data-column="topic_label">주제</th>
+                                    {% endif %}
+                                    <th class="sortable" data-column="at">작성일시</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in reviews %}
+                                <tr>
+                                    <td>{{ review.userName }}</td>
+                                    <td>
+                                        <span class="platform-badge {% if 'Google' in review.platform %}platform-google{% else %}platform-apple{% endif %}">
+                                            {% if 'Google' in review.platform %}🤖 Play Store{% else %}🍎 App Store{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="review-content">{{ review.review }}</td>
+                                    <td>
+                                        <span style="color: #ffc107;">
+                                            {% for i in range(review.score) %}★{% endfor %}
+                                            {% for i in range(5 - review.score) %}☆{% endfor %}
+                                        </span>
+                                        {{ review.score }}
+                                    </td>
+                                    {% if has_topics %}
+                                    <td>
+                                        <span class="topic-tag" style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">
+                                            {{ review.topic_label or '기타' }}
+                                        </span>
+                                    </td>
+                                    {% endif %}
+                                    <td>{{ review.at }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Google Play Store Reviews Tab -->
+                <div id="google-reviews" class="tab-content">
+                    <div class="table-container">
+                        <table class="reviewTable">
+                            <thead>
+                                <tr>
+                                    <th>사용자명</th>
+                                    <th>리뷰 내용</th>
+                                    <th>별점</th>
+                                    <th>작성일시</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in reviews %}
+                                {% if 'Google' in review.platform %}
+                                <tr>
+                                    <td>{{ review.userName }}</td>
+                                    <td class="review-content">{{ review.review }}</td>
+                                    <td>
+                                        <span style="color: #ffc107;">
+                                            {% for i in range(review.score) %}★{% endfor %}
+                                            {% for i in range(5 - review.score) %}☆{% endfor %}
+                                        </span>
+                                        {{ review.score }}
+                                    </td>
+                                    <td>{{ review.at }}</td>
+                                </tr>
                                 {% endif %}
-                                <th class="sortable" data-column="at">작성일시</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for review in reviews %}
-                            <tr>
-                                <td>{{ review.userName }}</td>
-                                <td class="review-content">{{ review.review }}</td>
-                                <td>
-                                    <span style="color: #ffc107;">
-                                        {% for i in range(review.score) %}★{% endfor %}
-                                        {% for i in range(5 - review.score) %}☆{% endfor %}
-                                    </span>
-                                    {{ review.score }}
-                                </td>
-                                {% if has_topics %}
-                                <td>
-                                    <span class="topic-tag" style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">
-                                        {{ review.topic_label or '기타' }}
-                                    </span>
-                                </td>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Apple App Store Reviews Tab -->
+                <div id="apple-reviews" class="tab-content">
+                    <div class="table-container">
+                        <table class="reviewTable">
+                            <thead>
+                                <tr>
+                                    <th>사용자명</th>
+                                    <th>리뷰 내용</th>
+                                    <th>별점</th>
+                                    <th>작성일시</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for review in reviews %}
+                                {% if 'Apple' in review.platform %}
+                                <tr>
+                                    <td>{{ review.userName }}</td>
+                                    <td class="review-content">{{ review.review }}</td>
+                                    <td>
+                                        <span style="color: #ffc107;">
+                                            {% for i in range(review.score) %}★{% endfor %}
+                                            {% for i in range(5 - review.score) %}☆{% endfor %}
+                                        </span>
+                                        {{ review.score }}
+                                    </td>
+                                    <td>{{ review.at }}</td>
+                                </tr>
                                 {% endif %}
-                                <td>{{ review.at }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
+        // Tab switching function
+        function switchTab(evt, tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+            
+            // Show selected tab content and mark button as active
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
-            const table = document.getElementById('reviewTable');
-            if (!table) return;
+            // Initialize sorting for all tables
+            const tables = document.querySelectorAll('.reviewTable');
             
-            const hasTopics = table.dataset.hasTopics === 'true';
-            const tbody = table.querySelector('tbody');
-            const headers = table.querySelectorAll('th.sortable');
-            
-            headers.forEach(header => {
-                let ascending = true;
+            tables.forEach(table => {
+                const hasTopics = table.dataset.hasTopics === 'true';
+                const tbody = table.querySelector('tbody');
+                const headers = table.querySelectorAll('th.sortable');
                 
-                header.addEventListener('click', function() {
-                    const column = this.dataset.column;
-                    const rows = Array.from(tbody.querySelectorAll('tr'));
+                headers.forEach(header => {
+                    let ascending = true;
                     
-                    // Clear other sort indicators
-                    headers.forEach(h => {
-                        if (h !== this) h.removeAttribute('aria-sort');
-                    });
-                    
-                    // Sort rows
-                    rows.sort((a, b) => {
-                        let aVal, bVal;
+                    header.addEventListener('click', function() {
+                        const column = this.dataset.column;
+                        const rows = Array.from(tbody.querySelectorAll('tr'));
                         
-                        switch(column) {
-                            case 'userName':
-                                aVal = a.cells[0].textContent.trim();
-                                bVal = b.cells[0].textContent.trim();
-                                break;
-                            case 'review':
-                                aVal = a.cells[1].textContent.trim().length;
-                                bVal = b.cells[1].textContent.trim().length;
-                                break;
-                            case 'score':
-                                aVal = parseInt(a.cells[2].textContent.trim().split(' ').pop());
-                                bVal = parseInt(b.cells[2].textContent.trim().split(' ').pop());
-                                break;
-                            case 'topic_label':
-                                if (hasTopics) {
-                                    aVal = a.cells[3].textContent.trim();
-                                    bVal = b.cells[3].textContent.trim();
-                                }
-                                break;
-                            case 'at':
-                                const dateColIndex = hasTopics ? 4 : 3;
-                                aVal = new Date(a.cells[dateColIndex].textContent.trim());
-                                bVal = new Date(b.cells[dateColIndex].textContent.trim());
-                                break;
-                            default:
-                                aVal = a.cells[0].textContent.trim();
-                                bVal = b.cells[0].textContent.trim();
-                        }
+                        // Clear other sort indicators
+                        headers.forEach(h => {
+                            if (h !== this) h.removeAttribute('aria-sort');
+                        });
                         
-                        if (column === 'review' || column === 'score') {
-                            return ascending ? aVal - bVal : bVal - aVal;
-                        } else if (column === 'at') {
-                            return ascending ? aVal - bVal : bVal - aVal;
-                        } else {
-                            return ascending ? 
-                                aVal.localeCompare(bVal, 'ko') : 
-                                bVal.localeCompare(aVal, 'ko');
-                        }
+                        // Sort rows
+                        rows.sort((a, b) => {
+                            let aVal, bVal;
+                            
+                            switch(column) {
+                                case 'userName':
+                                    aVal = a.cells[0].textContent.trim();
+                                    bVal = b.cells[0].textContent.trim();
+                                    break;
+                                case 'platform':
+                                    aVal = a.cells[1].textContent.trim();
+                                    bVal = b.cells[1].textContent.trim();
+                                    break;
+                                case 'review':
+                                    aVal = a.cells[2].textContent.trim().length;
+                                    bVal = b.cells[2].textContent.trim().length;
+                                    break;
+                                case 'score':
+                                    aVal = parseInt(a.cells[3].textContent.trim().split(' ').pop());
+                                    bVal = parseInt(b.cells[3].textContent.trim().split(' ').pop());
+                                    break;
+                                case 'topic_label':
+                                    if (hasTopics) {
+                                        aVal = a.cells[4].textContent.trim();
+                                        bVal = b.cells[4].textContent.trim();
+                                    }
+                                    break;
+                                case 'at':
+                                    const dateColIndex = hasTopics ? 5 : 4;
+                                    aVal = new Date(a.cells[dateColIndex].textContent.trim());
+                                    bVal = new Date(b.cells[dateColIndex].textContent.trim());
+                                    break;
+                                default:
+                                    aVal = a.cells[0].textContent.trim();
+                                    bVal = b.cells[0].textContent.trim();
+                            }
+                            
+                            if (column === 'review' || column === 'score') {
+                                return ascending ? aVal - bVal : bVal - aVal;
+                            } else if (column === 'at') {
+                                return ascending ? aVal - bVal : bVal - aVal;
+                            } else {
+                                return ascending ? 
+                                    aVal.localeCompare(bVal, 'ko') : 
+                                    bVal.localeCompare(aVal, 'ko');
+                            }
+                        });
+                        
+                        // Re-append sorted rows
+                        rows.forEach(row => tbody.appendChild(row));
+                        
+                        // Update sort indicator
+                        this.setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
+                        ascending = !ascending;
                     });
-                    
-                    // Re-append sorted rows
-                    rows.forEach(row => tbody.appendChild(row));
-                    
-                    // Update sort indicator
-                    this.setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
-                    ascending = !ascending;
                 });
             });
         });
