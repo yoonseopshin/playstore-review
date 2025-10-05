@@ -1,4 +1,4 @@
-name: Crawl Play Store Reviews and Deploy to GitHub Pages
+name: MAPP - Mobile App Review Crawler & Deploy
 
 on:
   schedule:
@@ -35,15 +35,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Crawler Script
+      - name: Run MAPP Crawler
         run: |
-          python playstore-review-crawl.py
+          python mapp-review-crawl.py
 
       - name: Rename HTML file to index.html
         run: |
           cd ./output
-          cp review_report_*.html index.html
-          echo "✓ index.html created"
+          cp mapp_report_*.html index.html
+          echo "✓ index.html created from MAPP report"
           ls -la *.html
 
       - name: Setup Pages

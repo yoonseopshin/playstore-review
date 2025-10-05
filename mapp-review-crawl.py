@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-Multi-Platform Review Analysis Script
+Mobile App Review Crawler (MAPP)
 
-This script collects Google Play Store reviews for a specified app,
-analyzes them, and generates visualization reports including:
-- CSV data export
-- Time series charts
-- Word clouds
-- Interactive HTML reports with platform comparison
-- Topic modeling analysis
+This script crawls and analyzes mobile app reviews from Google Play Store and Apple App Store.
+It provides comprehensive analysis including:
+- Review data collection from both app stores
+- CSV data export with store information
+- Time series visualization
+- Word cloud generation
+- Interactive HTML reports with store comparison
+- AI-powered topic modeling analysis
 """
 
 from google_play_scraper import reviews, Sort
@@ -251,7 +252,7 @@ def collect_all_reviews() -> list:
     Returns:
         Combined list of review data from both platforms
     """
-    print("=== Starting multi-platform review collection ===")
+    print("=== Starting mobile app review collection ===")
     
     # Collect from both platforms
     playstore_reviews = collect_playstore_reviews()
@@ -421,10 +422,10 @@ def create_summary_chart(df: pd.DataFrame, font_name: str, output_dir: str,
     plt.tight_layout()
     
     # Save chart
-    summary_img = os.path.join(output_dir, f"multi_platform_summary_{start_date}_{end_date}.png")
+    summary_img = os.path.join(output_dir, f"mapp_summary_{start_date}_{end_date}.png")
     plt.savefig(summary_img, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Multi-platform summary visualization saved: {summary_img}")
+    print(f"Mobile app summary visualization saved: {summary_img}")
     return summary_img
 
 
@@ -845,7 +846,7 @@ def generate_html_report(df: pd.DataFrame, output_dir: str, start_date: datetime
         html_content = template.render(context)
         
         # Save HTML file
-        html_file = os.path.join(output_dir, f"review_report_{start_date}_{end_date}.html")
+        html_file = os.path.join(output_dir, f"mapp_report_{start_date}_{end_date}.html")
         with open(html_file, "w", encoding="utf-8") as f:
             f.write(html_content)
         
@@ -862,7 +863,7 @@ def main():
     Main execution function
     """
     try:
-        print("=== Multi-Platform Review Analysis Started ===")
+        print("=== Mobile App Review Crawler (MAPP) Started ===")
         
         # Step 1: Setup environment
         font_name, font_path, output_dir = setup_environment()
@@ -898,8 +899,8 @@ def main():
         generate_html_report(df_with_topics, output_dir, start_date, end_date, 
                            summary_img, wc_img, topic_img, topic_summary)
         
-        print(f"✓ Review analysis with topic modeling for the last {Config.DAYS} days completed!")
-        print("=== Analysis Complete ===")
+        print(f"✓ Mobile app review analysis completed for the last {Config.DAYS} days!")
+        print("=== Mobile App Review Analysis Complete ===")
         
     except Exception as e:
         print(f"✗ Error occurred: {str(e)}")
