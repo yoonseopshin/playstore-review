@@ -371,22 +371,24 @@ def perform_topic_modeling(df: pd.DataFrame, output_dir: str,
             # Add topics to dataframe
             df_with_topics = df.copy()
             
-            # Create a mapping for reviews that were processed
-            processed_reviews = df['review'].astype(str).apply(preprocess_text_for_bert)
-            topic_mapping = {}
-            topic_idx = 0
+            # Create proper mapping between original reviews and topics
+            # The 'topics' array corresponds to the filtered 'reviews' list
+            df_with_topics['topic'] = -1  # Default to outlier
             
-            for idx, review in enumerate(processed_reviews):
-                if len(review) > 0:
-                    if topic_idx < len(topics):
-                        topic_mapping[idx] = topics[topic_idx]
-                        topic_idx += 1
+            # Map topics back to original dataframe
+            valid_review_idx = 0
+            for df_idx in df_with_topics.index:
+                original_review = df_with_topics.loc[df_idx, 'review']
+                processed_review = preprocess_text_for_bert(str(original_review))
+                
+                if len(processed_review) > 0:  # This review was included in topic modeling
+                    if valid_review_idx < len(topics):
+                        df_with_topics.loc[df_idx, 'topic'] = topics[valid_review_idx]
+                        valid_review_idx += 1
                     else:
-                        topic_mapping[idx] = -1
+                        df_with_topics.loc[df_idx, 'topic'] = -1
                 else:
-                    topic_mapping[idx] = -1
-            
-            df_with_topics['topic'] = df_with_topics.index.map(topic_mapping).fillna(-1).astype(int)
+                    df_with_topics.loc[df_idx, 'topic'] = -1
             
             # Generate topic labels with safety checks
             topic_labels = {}
