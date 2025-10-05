@@ -11,7 +11,7 @@
 
 ## 📊 Live Report
 
-[Latest review analysis](https://yoonseopshin.github.io/playstore-review/)
+[Latest review analysis](https://yoonseopshin.github.io/mapp-review/)
 
 ## 🛠 Usage
 
