@@ -166,7 +166,7 @@ class ChartGenerator:
                 # Select meaningful nouns and adjectives only
                 if pos in ['Noun', 'Adjective'] and len(word) > 1:
                     if word not in stopwords and word.isalpha():
-                        keywords.append(self._normalize_word(word, pos))
+                        keywords.append(word)
             
             return keywords
             
