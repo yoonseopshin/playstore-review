@@ -11,8 +11,8 @@ class ReviewFilter:
     
     def __init__(self, days: int = 7):
         self.days = days
-        self.start_date = (datetime.now() - timedelta(days=days)).date()
-        self.end_date = datetime.now().date()
+        self.end_date = (datetime.now() - timedelta(days=1)).date()
+        self.start_date = (self.end_date - timedelta(days=days-1))
     
     def process_reviews(self, review_data: List[Dict]) -> Optional[pd.DataFrame]:
         """
