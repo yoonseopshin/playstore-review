@@ -195,6 +195,31 @@
             font-weight: 500;
         }
         
+        /* Download Button */
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .download-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
         /* Tab Styles */
         .tabs {
             display: flex;
@@ -459,6 +484,11 @@
         <div class="card">
             <div class="card-header">
                 <h2>📝 리뷰 상세 <span class="count-badge">총 {{ total_reviews }}건</span></h2>
+                <div style="margin-top: 15px;">
+                    <button id="downloadCsvBtn" class="download-btn" onclick="downloadCSV()">
+                        📥 CSV 다운로드
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <!-- Tab Navigation -->
@@ -587,7 +617,68 @@
         </div>
     </div>
 
+    <!-- Data for JavaScript -->
+    <script type="application/json" id="reviews-data">{{ reviews | tojson | safe }}</script>
+    <script type="application/json" id="has-topics-data">{{ has_topics | tojson | safe }}</script>
+    
     <script>
+        
+        // CSV Download Function
+        function downloadCSV() {
+            const filename = `user_reviews_summary_{{ start_date }}_{{ end_date }}.csv`;
+            const csvData = generateCSVData();
+            downloadFile(csvData, filename);
+        }
+        
+        function generateCSVData() {
+            // Get data from JSON script tags
+            const reviews = JSON.parse(document.getElementById('reviews-data').textContent);
+            const hasTopics = JSON.parse(document.getElementById('has-topics-data').textContent);
+            
+            // CSV Header - always include topics column if available
+            let headers = ['사용자명', '플랫폼', '리뷰내용', '별점'];
+            if (hasTopics) {
+                headers.push('주제');
+            }
+            headers.push('작성일시');
+            
+            let csvContent = headers.join(',') + '\n';
+            
+            // CSV Data
+            reviews.forEach(review => {
+                let row = [
+                    `"${review.userName || ''}"`,
+                    `"${review.platform || ''}"`,
+                    `"${(review.review || '').replace(/"/g, '""')}"`,
+                    review.score || 0
+                ];
+                
+                if (hasTopics) {
+                    row.push(`"${review.topic_label || '기타'}"`);
+                }
+                
+                row.push(`"${review.at || ''}"`);
+                csvContent += row.join(',') + '\n';
+            });
+            
+            return csvContent;
+        }
+        
+        function downloadFile(content, filename) {
+            const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+        
         // Tab switching function
         function switchTab(evt, tabName) {
             // Hide all tab contents
