@@ -99,10 +99,14 @@ class ChartGenerator:
     
     def create_wordcloud(self, df: pd.DataFrame, output_dir: str,
                         start_date: datetime.date, end_date: datetime.date) -> str:
-        """Create word cloud from review text"""
+        """Create word cloud from review text with Korean morphological analysis"""
         
         # Combine all review text
         text = ' '.join(df['review'].astype(str))
+        
+        # Extract meaningful Korean keywords
+        keywords = self._extract_korean_keywords(text)
+        processed_text = ' '.join(keywords)
         
         # Create WordCloud
         wordcloud = WordCloud(
@@ -112,8 +116,9 @@ class ChartGenerator:
             background_color='white',
             max_words=100,
             colormap='viridis',
-            relative_scaling=0.5
-        ).generate(text)
+            relative_scaling=0.5,
+            collocations=False  # Prevent duplicate word combinations
+        ).generate(processed_text)
         
         # Create plot
         plt.figure(figsize=(15, 8))
@@ -128,3 +133,87 @@ class ChartGenerator:
         plt.close()
         print(f"Word cloud image saved: {wc_img}")
         return wc_img
+    
+    def _extract_korean_keywords(self, text: str) -> list:
+        """Extract meaningful Korean keywords using morphological analysis"""
+        try:
+            from konlpy.tag import Okt
+            okt = Okt()
+            
+            # Korean stopwords for mobile app reviews (based on common patterns)
+            stopwords = {
+                # Basic particles and endings
+                '것', '수', '때', '거', '게', '걸', '건', '겠', '고', '는', '다', '도', '를', '이', '가',
+                '에', '의', '로', '으로', '와', '과', '한', '을', '를', '께', '서', '부터', '까지',
+                                
+                # Demonstratives and question words
+                '그', '저', '이', '이런', '저런', '그런', '어떤', '무슨', '어느', '여기', '거기', '저기',
+                
+                # Adverbs and intensifiers
+                '너무', '정말', '진짜', '완전', '엄청', '되게', '좀', '잘', '못', '안', '아주', '매우',
+                '많이', '조금', '약간', '꽤', '상당히', '굉장히', '정말로', '진짜로',
+                
+                # Time expressions (usually not meaningful for sentiment)
+                '오늘', '어제', '내일', '지금', '나중', '전에', '후에', '동안', '때문', '이후',
+            }
+            
+            # Perform morphological analysis and extract nouns/adjectives
+            # Use stem=False to preserve original word forms and avoid over-stemming
+            words = okt.pos(text, stem=False)
+            keywords = []
+            
+            for word, pos in words:
+                # Select meaningful nouns and adjectives only
+                if pos in ['Noun', 'Adjective'] and len(word) > 1:
+                    if word not in stopwords and word.isalpha():
+                        # Apply conservative normalization for common patterns
+                        normalized_word = self._normalize_word(word, pos)
+                        keywords.append(normalized_word)
+            
+            return keywords
+            
+        except ImportError:
+            print("⚠️  KoNLPy not available, using simple text processing")
+            return self._simple_korean_processing(text)
+    
+    def _simple_korean_processing(self, text: str) -> list:
+        """Fallback: Simple Korean text processing without morphological analysis"""
+        import re
+        
+        # Simple preprocessing
+        # Remove special characters, extract Korean text only
+        korean_text = re.sub(r'[^가-힣\s]', '', text)
+        words = korean_text.split()
+        
+        # Select words with length >= 2
+        keywords = [word for word in words if len(word) >= 2]
+        
+        return keywords
+    
+    def _normalize_word(self, word: str, pos: str) -> str:
+        """Apply conservative word normalization to avoid over-stemming issues"""
+        
+        # For adjectives, apply minimal normalization for common endings
+        if pos == 'Adjective':
+            # Convert common adjective endings to base form
+            if word.endswith('좋은'):
+                return '좋다'
+            elif word.endswith('나쁜'):
+                return '나쁘다'
+            elif word.endswith('빠른'):
+                return '빠르다'
+            elif word.endswith('느린'):
+                return '느리다'
+            elif word.endswith('편한'):
+                return '편하다'
+            elif word.endswith('불편한'):
+                return '불편하다'
+        
+        # For nouns, preserve original form to avoid issues like "정신아" -> "정신"
+        # Only apply very safe normalizations
+        if pos == 'Noun':
+            # Remove common honorific endings that might be misclassified
+            if len(word) > 2 and word.endswith('님'):
+                return word  # Keep as is, it's meaningful
+            
+        return word
