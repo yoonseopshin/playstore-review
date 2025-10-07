@@ -166,9 +166,7 @@ class ChartGenerator:
                 # Select meaningful nouns and adjectives only
                 if pos in ['Noun', 'Adjective'] and len(word) > 1:
                     if word not in stopwords and word.isalpha():
-                        # Apply conservative normalization for common patterns
-                        normalized_word = self._normalize_word(word, pos)
-                        keywords.append(normalized_word)
+                        keywords.append(self._normalize_word(word, pos))
             
             return keywords
             
@@ -189,31 +187,3 @@ class ChartGenerator:
         keywords = [word for word in words if len(word) >= 2]
         
         return keywords
-    
-    def _normalize_word(self, word: str, pos: str) -> str:
-        """Apply conservative word normalization to avoid over-stemming issues"""
-        
-        # For adjectives, apply minimal normalization for common endings
-        if pos == 'Adjective':
-            # Convert common adjective endings to base form
-            if word.endswith('좋은'):
-                return '좋다'
-            elif word.endswith('나쁜'):
-                return '나쁘다'
-            elif word.endswith('빠른'):
-                return '빠르다'
-            elif word.endswith('느린'):
-                return '느리다'
-            elif word.endswith('편한'):
-                return '편하다'
-            elif word.endswith('불편한'):
-                return '불편하다'
-        
-        # For nouns, preserve original form to avoid issues like "정신아" -> "정신"
-        # Only apply very safe normalizations
-        if pos == 'Noun':
-            # Remove common honorific endings that might be misclassified
-            if len(word) > 2 and word.endswith('님'):
-                return word  # Keep as is, it's meaningful
-            
-        return word
