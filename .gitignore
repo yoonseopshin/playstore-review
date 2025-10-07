@@ -189,3 +189,4 @@ pip-selfcheck.json
 
 # Project specific
 output/  # Commented out to allow reading output files for debugging
+output/*
