@@ -37,7 +37,7 @@ jobs:
 
       - name: Run MAPP Crawler
         run: |
-          python mapp-review-crawl.py
+          python main.py
 
       - name: Rename HTML file to index.html
         run: |
