@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile App Review Report ({{ start_date }} ~ {{ end_date }})</title>
+    <title>모바일 앱 리뷰 분석 리포트 ({{ start_date }} ~ {{ end_date }})</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="MAPP 리뷰 분석 리포트">
+    <meta property="og:description" content="{{ total_reviews }}개 리뷰 분석 결과 - {{ days }}일간 모바일 앱 리뷰 인사이트">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ summary_img }}">
+    <meta name="description" content="KoELECTRA 기반 모바일 앱 리뷰 분석 - {{ total_reviews }}개 리뷰를 5개 카테고리로 분류한 상세 리포트">
+    <meta name="keywords" content="모바일앱,리뷰분석,KoELECTRA,의도분류,앱스토어,플레이스토어">
+    <meta name="author" content="MAPP - Mobile App Review Analyzer">
+    
     <style>
         /* Reset and Base Styles */
         * {
