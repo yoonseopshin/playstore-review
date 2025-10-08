@@ -22,7 +22,7 @@ class HTMLReportGenerator:
     
     def generate_html_report(self, df: pd.DataFrame, output_dir: str, start_date: datetime.date, 
                             end_date: datetime.date, summary_img: str, wc_img: str, 
-                            topic_img: str = "", topic_summary: Dict = None) -> str:
+                            intent_img: str = "", intent_summary: Dict = None) -> str:
         """Generate responsive HTML report using Jinja2 templates"""
         
         try:
@@ -30,8 +30,8 @@ class HTMLReportGenerator:
             
             # Prepare data for template
             columns_to_drop = ['date']
-            if 'topic' in df.columns:
-                columns_to_drop.append('topic')
+            if 'intent' in df.columns:
+                columns_to_drop.append('intent')
                 
             df_for_html = df.drop(columns=[col for col in columns_to_drop if col in df.columns]).copy()
             df_for_html['at'] = df_for_html['at'].dt.strftime('%Y-%m-%d %H:%M:%S')
@@ -63,9 +63,10 @@ class HTMLReportGenerator:
                 'total_reviews': total_reviews,
                 'avg_rating': avg_rating,
                 'days': (end_date - start_date).days + 1,
-                'has_topics': 'topic_label' in df.columns,
-                'topic_summary': topic_summary or {},
-                'topic_img': os.path.basename(topic_img) if topic_img else "",
+                'has_intents': 'intent_label' in df.columns,
+                'has_topics': False,  # Set to False since we're using intents now
+                'intent_summary': intent_summary or {},
+                'intent_img': os.path.basename(intent_img) if intent_img else "",
                 'platform_stats': platform_stats
             }
             

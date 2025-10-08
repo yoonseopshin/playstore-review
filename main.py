@@ -7,7 +7,7 @@ Complete pipeline execution script
 from mapp_review.config import Config
 from mapp_review.crawlers import PlayStoreCrawler, AppStoreCrawler
 from mapp_review.preprocessing.filter import ReviewFilter
-from mapp_review.analysis.topic_modeling import TopicModeler
+from mapp_review.analysis.intent_classifier import perform_intent_classification
 from mapp_review.visualization.charts import ChartGenerator
 from mapp_review.reporting.html_generator import HTMLReportGenerator
 from mapp_review.reporting.csv_exporter import CSVExporter
@@ -27,7 +27,6 @@ def main():
         playstore_crawler = PlayStoreCrawler(Config.PLAYSTORE_APP_PACKAGE)
         appstore_crawler = AppStoreCrawler(Config.APPSTORE_APP_ID)
         review_filter = ReviewFilter(Config.DAYS)
-        topic_modeler = TopicModeler()
         chart_generator = ChartGenerator(font_name, font_path)
         html_generator = HTMLReportGenerator()
         csv_exporter = CSVExporter()
@@ -65,18 +64,17 @@ def main():
         summary_img = chart_generator.create_summary_chart(df, output_dir, start_date, end_date)
         wc_img = chart_generator.create_wordcloud(df, output_dir, start_date, end_date)
         
-        # Step 8: Perform topic modeling
-        df_with_topics, topic_img, topic_summary = topic_modeler.perform_topic_modeling(
+        # Step 8: Perform intent classification
+        df_with_intents, intent_summary, intent_img = perform_intent_classification(
             df, output_dir, start_date, end_date)
         
-        # Step 9: Save CSV with topics (if available)
-        if 'topic_label' in df_with_topics.columns:
-            csv_exporter.save_csv(df_with_topics, output_dir, start_date, end_date, "_with_topics")
+        # Step 9: Save CSV with intent analysis
+        csv_exporter.save_csv(df_with_intents, output_dir, start_date, end_date, "_with_intents")
         
         # Step 10: Generate HTML report
         html_generator.generate_html_report(
-            df_with_topics, output_dir, start_date, end_date, 
-            summary_img, wc_img, topic_img, topic_summary)
+            df_with_intents, output_dir, start_date, end_date, 
+            summary_img, wc_img, intent_img, intent_summary)
         
         print(f"\n✓ Mobile app review analysis completed for the last {Config.DAYS} days!")
         print("=== Mobile App Review Analysis Complete ===")

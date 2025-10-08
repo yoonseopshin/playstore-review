@@ -220,6 +220,57 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
+        /* Intent Analysis Styles */
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .insight-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 5px solid #007bff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .insight-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .insight-item h4 {
+            margin: 0 0 12px 0;
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .keyword-tag {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1976d2;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid rgba(25, 118, 210, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .keyword-tag:hover {
+            background: linear-gradient(135deg, #bbdefb 0%, #90caf9 100%);
+            transform: scale(1.05);
+        }
+        
         /* Tab Styles */
         .tabs {
             display: flex;
@@ -480,6 +531,60 @@
         </div>
         {% endif %}
 
+        <!-- Intent Classification Results -->
+        {% if has_intents and intent_summary %}
+        <div class="card">
+            <div class="card-header">
+                <h2>🎯 리뷰 의도 분석 (KoELECTRA)</h2>
+            </div>
+            <div class="card-body">
+                {% if intent_img %}
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <img src="{{ intent_img }}" alt="Intent Distribution Chart" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                </div>
+                {% endif %}
+                
+                <div class="stats-grid">
+                    {% for intent, count in intent_summary.intent_distribution.items() %}
+                    <div class="stat-item">
+                        <div class="stat-number">{{ count }}건</div>
+                        <div class="stat-label">{{ intent }}</div>
+                        <div class="stat-percentage">{{ "%.1f"|format((count / intent_summary.total_reviews * 100)) }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <h3>📊 분석 요약</h3>
+                    <ul>
+                        <li><strong>총 리뷰 수:</strong> {{ intent_summary.total_reviews }}건</li>
+                        <li><strong>평균 신뢰도:</strong> {{ "%.2f"|format(intent_summary.average_confidence) }}</li>
+                        <li><strong>분류 방법:</strong> KoELECTRA + 규칙 기반 하이브리드</li>
+                        <li><strong>분류 카테고리:</strong> {{ intent_summary.categories|length }}개</li>
+                    </ul>
+                </div>
+                
+                {% if intent_summary.insights %}
+                <div style="margin-top: 20px;">
+                    <h3>🔍 카테고리별 주요 키워드</h3>
+                    <div class="insights-grid">
+                        {% for intent, keywords in intent_summary.insights.items() %}
+                        <div class="insight-item">
+                            <h4>{{ intent }}</h4>
+                            <div class="keywords">
+                                {% for keyword in keywords %}
+                                <span class="keyword-tag">{{ keyword }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Platform Tabs for Reviews -->
         <div class="card">
             <div class="card-header">
@@ -508,8 +613,8 @@
                                     <th class="sortable" data-column="platform">플랫폼</th>
                                     <th class="sortable" data-column="review">리뷰 내용</th>
                                     <th class="sortable" data-column="score">별점</th>
-                                    {% if has_topics %}
-                                    <th class="sortable" data-column="topic_label">주제</th>
+                                    {% if has_intents %}
+                                    <th class="sortable" data-column="intent_label">의도</th>
                                     {% endif %}
                                     <th class="sortable" data-column="at">작성일시</th>
                                 </tr>
@@ -531,10 +636,10 @@
                                         </span>
                                         {{ review.score }}
                                     </td>
-                                    {% if has_topics %}
+                                    {% if has_intents %}
                                     <td>
-                                        <span class="topic-tag" style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">
-                                            {{ review.topic_label or '기타' }}
+                                        <span class="intent-tag" style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                                            {{ review.intent_label or '기타' }}
                                         </span>
                                     </td>
                                     {% endif %}
