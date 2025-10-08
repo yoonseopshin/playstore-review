@@ -271,6 +271,212 @@
             transform: scale(1.05);
         }
         
+        /* Analysis Summary Styles */
+        .analysis-summary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .summary-item {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .summary-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .summary-number {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #007bff;
+            margin-bottom: 8px;
+        }
+        
+        .summary-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .confidence-explanation {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .confidence-explanation h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .confidence-explanation p {
+            margin: 0 0 15px 0;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .confidence-scale {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .scale-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        
+        .scale-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        /* Category Stats Styles */
+        .category-stats {
+            margin-top: 30px;
+        }
+        
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .category-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            border-color: #007bff;
+        }
+        
+        .category-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .category-icon {
+            font-size: 1.5rem;
+        }
+        
+        .category-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+        }
+        
+        .category-stats-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .category-count {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        
+        .category-percentage {
+            font-size: 1rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .category-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .category-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+        
+        /* Intent Tag Colors - Matching Pie Chart */
+        .intent-tag {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid;
+        }
+        
+        .intent-기능-improve-요청 {
+            background: #d4edda;
+            color: #155724;
+            border-color: #28a745;
+        }
+        
+        .intent-버그-report {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #dc3545;
+        }
+        
+        .intent-성능 {
+            background: #fff3cd;
+            color: #856404;
+            border-color: #ffc107;
+        }
+        
+        .intent-긍정-feedback {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-color: #17a2b8;
+        }
+        
+        .intent-부정-feedback {
+            background: #e2e3f1;
+            color: #383d41;
+            border-color: #6f42c1;
+        }
+        
+        .intent-기타 {
+            background: #e2e3e5;
+            color: #383d41;
+            border-color: #6c757d;
+        }
+        
         /* Tab Styles */
         .tabs {
             display: flex;
@@ -535,37 +741,84 @@
         {% if has_intents and intent_summary %}
         <div class="card">
             <div class="card-header">
-                <h2>🎯 리뷰 의도 분석 (KoELECTRA)</h2>
+                <h2>📊 리뷰 분류</h2>
             </div>
             <div class="card-body">
+                <!-- Analysis Summary First -->
+                <div class="analysis-summary">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-number">{{ intent_summary.total_reviews }}</div>
+                            <div class="summary-label">총 리뷰 수</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-number">{{ intent_summary.categories|length }}</div>
+                            <div class="summary-label">분류 카테고리</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-number">{{ "%.0f"|format(intent_summary.average_confidence * 100) }}%</div>
+                            <div class="summary-label">평균 분류 정확도</div>
+                        </div>
+                    </div>
+                    
+                    <div class="confidence-explanation">
+                        <h4>🎯 분류 정확도란?</h4>
+                        <p>AI가 각 리뷰를 올바른 카테고리로 분류했다고 판단하는 신뢰도입니다.</p>
+                        <div class="confidence-scale">
+                            <div class="scale-item">
+                                <span class="scale-color" style="background: #dc3545;"></span>
+                                <span>0-30%: 낮음</span>
+                            </div>
+                            <div class="scale-item">
+                                <span class="scale-color" style="background: #ffc107;"></span>
+                                <span>31-70%: 보통</span>
+                            </div>
+                            <div class="scale-item">
+                                <span class="scale-color" style="background: #28a745;"></span>
+                                <span>71-100%: 높음</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pie Chart -->
                 {% if intent_img %}
-                <div style="text-align: center; margin-bottom: 30px;">
+                <div style="text-align: center; margin: 30px 0;">
                     <img src="{{ intent_img }}" alt="Intent Distribution Chart" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
                 </div>
                 {% endif %}
                 
-                <div class="stats-grid">
-                    {% for intent, count in intent_summary.intent_distribution.items() %}
-                    <div class="stat-item">
-                        <div class="stat-number">{{ count }}건</div>
-                        <div class="stat-label">{{ intent }}</div>
-                        <div class="stat-percentage">{{ "%.1f"|format((count / intent_summary.total_reviews * 100)) }}%</div>
+                <!-- Improved Category Stats -->
+                <div class="category-stats">
+                    <h3>📈 카테고리별 상세 분석</h3>
+                    <div class="category-grid">
+                        {% for intent, count in intent_summary.intent_distribution.items() %}
+                        <div class="category-card">
+                            <div class="category-header">
+                                <span class="category-icon">
+                                    {% if intent == '기능 개선 요청' %}🔧
+                                    {% elif intent == '버그 제보' %}🐛
+                                    {% elif intent == '성능' %}⚡
+                                    {% elif intent == '긍정 피드백' %}😊
+                                    {% elif intent == '부정 피드백' %}😞
+                                    {% else %}📝{% endif %}
+                                </span>
+                                <span class="category-name">{{ intent }}</span>
+                            </div>
+                            <div class="category-stats-content">
+                                <div class="category-count">{{ count }}건</div>
+                                <div class="category-percentage">{{ "%.1f"|format((count / intent_summary.total_reviews * 100)) }}%</div>
+                                <div class="category-bar">
+                                    <div class="category-bar-fill" style="width: {{ "%.1f"|format((count / intent_summary.total_reviews * 100)) }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
-                
-                <div style="margin-top: 20px;">
-                    <h3>📊 분석 요약</h3>
-                    <ul>
-                        <li><strong>총 리뷰 수:</strong> {{ intent_summary.total_reviews }}건</li>
-                        <li><strong>평균 신뢰도:</strong> {{ "%.2f"|format(intent_summary.average_confidence) }}</li>
-                        <li><strong>분류 방법:</strong> KoELECTRA + 규칙 기반 하이브리드</li>
-                        <li><strong>분류 카테고리:</strong> {{ intent_summary.categories|length }}개</li>
-                    </ul>
                 </div>
                 
                 {% if intent_summary.insights %}
-                <div style="margin-top: 20px;">
+                <div style="margin-top: 30px;">
                     <h3>🔍 카테고리별 주요 키워드</h3>
                     <div class="insights-grid">
                         {% for intent, keywords in intent_summary.insights.items() %}
@@ -638,7 +891,7 @@
                                     </td>
                                     {% if has_intents %}
                                     <td>
-                                        <span class="intent-tag" style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                                        <span class="intent-tag intent-{{ review.intent_label|replace(' ', '-')|replace('개선', 'improve')|replace('제보', 'report')|replace('피드백', 'feedback') }}">
                                             {{ review.intent_label or '기타' }}
                                         </span>
                                     </td>

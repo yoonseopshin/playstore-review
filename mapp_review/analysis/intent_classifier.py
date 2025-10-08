@@ -266,24 +266,40 @@ class IntentClassifier:
             
             intent_counts = df['intent_label'].value_counts()
             
-            # Create horizontal bar chart
+            # Create pie chart
+            colors = ['#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1']
             fig = go.Figure(data=[
-                go.Bar(
-                    x=intent_counts.values,
-                    y=intent_counts.index,
-                    orientation='h',
+                go.Pie(
+                    labels=intent_counts.index,
+                    values=intent_counts.values,
+                    hole=0.4,  # Donut chart style
                     marker=dict(
-                        color=['#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1'][:len(intent_counts)]
-                    )
+                        colors=colors[:len(intent_counts)],
+                        line=dict(color='#FFFFFF', width=2)
+                    ),
+                    textinfo='label+percent',
+                    textposition='outside',
+                    textfont=dict(size=12, family="Arial, sans-serif")
                 )
             ])
             
             fig.update_layout(
-                title="리뷰 의도 분석 결과",
-                xaxis_title="리뷰 수",
-                yaxis_title="의도 카테고리",
-                height=400 + len(intent_counts) * 30,
-                font=dict(family="Arial, sans-serif")
+                title={
+                    'text': "리뷰 분류 분포",
+                    'x': 0.5,
+                    'xanchor': 'center',
+                    'font': {'size': 18, 'family': "Arial, sans-serif"}
+                },
+                height=500,
+                font=dict(family="Arial, sans-serif"),
+                showlegend=True,
+                legend=dict(
+                    orientation="v",
+                    yanchor="middle",
+                    y=0.5,
+                    xanchor="left",
+                    x=1.05
+                )
             )
             
             # Save chart
