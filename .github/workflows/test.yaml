@@ -1,4 +1,4 @@
-name: MAPP - Mobile App Review Crawler & Deploy
+name: Test
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
   id-token: write 
 
 jobs:
-  crawl:
+  test:
     runs-on: self-hosted
     steps:
       - name: Checkout Repository
