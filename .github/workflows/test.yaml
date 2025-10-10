@@ -1,0 +1,28 @@
+name: MAPP - Mobile App Review Crawler & Deploy
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write 
+
+jobs:
+  crawl:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Debug Environment
+        run: |
+          echo "🔍 Debugging self-hosted runner environment..."
+          echo "PWD: $(pwd)"
+          echo "USER: $(whoami)"
+          echo "Python path: $(which python)"
+          echo "Python version: $(python --version)"
+          echo "Pip path: $(which pip)"
+          ls -la
