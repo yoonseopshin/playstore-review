@@ -94,36 +94,37 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store (Sort: NEWEST)...")
                 print(f"  🕵️  Using User-Agent: {os.environ.get('USER_AGENT')}")
                 
-                # First try with global settings to get the absolute latest reviews
-                print(f"  🌍 Trying global request first...")
-                global_result, global_token = reviews(
-                    self.app_package,
-                    sort=Sort.NEWEST,
-                    count=50  # Small sample to check latest
-                )
+                # Use the EXACT same request as local environment
+                request_count = min(count, 200)
+                print(f"  🇰🇷 Making Korean request (same as local)...")
+                print(f"     • app_package: {self.app_package}")
+                print(f"     • lang: ko")
+                print(f"     • country: kr") 
+                print(f"     • sort: NEWEST")
+                print(f"     • count: {request_count}")
                 
-                print(f"  📊 Global sample - Latest review: {global_result[0].get('at') if global_result else 'None'}")
-                
-                # Then get Korean reviews
                 result, continuation_token = reviews(
                     self.app_package,
                     lang='ko',
                     country='kr',
                     sort=Sort.NEWEST,
-                    count=min(count, 200)  # Limit initial request to get fresher results
+                    count=request_count
                 )
                 
-                print(f"  📊 Korean sample - Latest review: {result[0].get('at') if result else 'None'}")
+                print(f"  📊 Korean request result - Latest review: {result[0].get('at') if result else 'None'}")
+                print(f"  📦 Korean request count: {len(result)}")
                 
-                # If global has much newer reviews, mix them in
-                if global_result and result:
-                    global_latest = global_result[0].get('at')
-                    korean_latest = result[0].get('at')
-                    if global_latest and korean_latest and global_latest > korean_latest:
-                        print(f"  🔄 Global reviews are newer, mixing in top global reviews...")
-                        # Add top 20 global reviews to the beginning
-                        result = global_result[:20] + result
-                        print(f"  📦 Mixed result count: {len(result)}")
+                # For debugging: also check what global gives us
+                try:
+                    print(f"  🌍 [DEBUG] Checking global for comparison...")
+                    global_result, _ = reviews(
+                        self.app_package,
+                        sort=Sort.NEWEST,
+                        count=50
+                    )
+                    print(f"  📊 [DEBUG] Global latest: {global_result[0].get('at') if global_result else 'None'}")
+                except Exception as e:
+                    print(f"  ❌ [DEBUG] Global check failed: {e}")
                 
                 # Restore original User-Agent
                 if original_user_agent:
