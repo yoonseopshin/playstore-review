@@ -2,7 +2,7 @@ name: MAPP - Mobile App Review Crawler & Deploy
 
 on:
   schedule:
-    - cron: '0 9 * * 1'
+    - cron: '0 14 * * 1'
   workflow_dispatch:
 
 permissions:
