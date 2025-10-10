@@ -17,42 +17,32 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Check macOS environment
+      - name: Debug Environment
         run: |
-          echo "Running on macOS self-hosted runner"
-          echo "Current location: $(curl -s https://ipapi.co/city/), $(curl -s https://ipapi.co/country_name/)"
-          echo "Python version: $(python3 --version)"
-          echo "Pip version: $(pip3 --version)"
-
-      - name: Setup Virtual Environment
-        run: |
-          echo "🐍 Setting up Python virtual environment..."
-          python3 -m venv venv
-          source venv/bin/activate
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+          echo "🔍 Debugging self-hosted runner environment..."
+          echo "PWD: $(pwd)"
+          echo "USER: $(whoami)"
+          echo "Python path: $(which python)"
+          echo "Python version: $(python --version)"
+          echo "Pip path: $(which pip)"
+          ls -la
           
-      - name: Install Dependencies
+      - name: Simple Install Dependencies
         run: |
-          source venv/bin/activate
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          echo "📦 Installing dependencies with system Python..."
+          python -m pip install --user --upgrade pip
+          python -m pip install --user -r requirements.txt
       - name: Environment Check
         run: |
-          source venv/bin/activate
-          echo "📦 Virtual environment: $VIRTUAL_ENV"
-          echo "📦 Python path: $(which python)"
-          echo "📦 Installed packages:"
-          pip list | grep -E "(google|play|scraper)" || echo "No matching packages"
+          echo "📦 Checking installed packages..."
+          python -m pip list --user | grep -E "(google|play|scraper)" || echo "No matching packages"
 
       - name: Run MAPP Crawler with Debug
         run: |
-          source venv/bin/activate
           echo "🚀 Starting MAPP Crawler with enhanced debugging..."
           echo "📊 Configuration:"
           echo "   • REVIEW_COUNT: ${REVIEW_COUNT}"
           echo "   • ANALYSIS_DAYS: ${ANALYSIS_DAYS}"
-          echo "🐍 Using virtual environment: $VIRTUAL_ENV"
           python -u main.py
         env:
           PYTHONUNBUFFERED: 1
