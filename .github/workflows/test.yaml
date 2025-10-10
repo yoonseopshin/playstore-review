@@ -26,3 +26,11 @@ jobs:
           echo "Python version: $(python --version)"
           echo "Pip path: $(which pip)"
           ls -la
+
+      - name: Setup Virtual Environment 
+        run: |
+          echo "🐍 Setting up Python virtual environment..."
+          python -m venv venv
+          source venv/bin/activate
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV

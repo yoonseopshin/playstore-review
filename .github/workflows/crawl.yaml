@@ -27,22 +27,37 @@ jobs:
           echo "Pip path: $(which pip)"
           ls -la
           
-      - name: Simple Install Dependencies
+      - name: Setup Virtual Environment
         run: |
-          echo "📦 Installing dependencies with system Python..."
-          python -m pip install --user --upgrade pip
-          python -m pip install --user -r requirements.txt
+          echo "🐍 Setting up Python virtual environment..."
+          python -m venv venv
+          source venv/bin/activate
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+          
+      - name: Install Dependencies
+        run: |
+          source venv/bin/activate
+          echo "📦 Installing dependencies in virtual environment..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
       - name: Environment Check
         run: |
-          echo "📦 Checking installed packages..."
-          python -m pip list --user | grep -E "(google|play|scraper)" || echo "No matching packages"
+          source venv/bin/activate
+          echo "📦 Virtual environment: $VIRTUAL_ENV"
+          echo "📦 Python path: $(which python)"
+          echo "📦 Installed packages:"
+          pip list | grep -E "(google|play|scraper)" || echo "No matching packages"
 
       - name: Run MAPP Crawler with Debug
         run: |
+          source venv/bin/activate
           echo "🚀 Starting MAPP Crawler with enhanced debugging..."
           echo "📊 Configuration:"
           echo "   • REVIEW_COUNT: ${REVIEW_COUNT}"
           echo "   • ANALYSIS_DAYS: ${ANALYSIS_DAYS}"
+          echo "🐍 Using virtual environment: $VIRTUAL_ENV"
           python -u main.py
         env:
           PYTHONUNBUFFERED: 1
