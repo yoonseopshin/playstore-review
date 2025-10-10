@@ -454,40 +454,54 @@
             border: 1px solid;
         }
         
-        .intent-기능-improve-요청 {
-            background: #d4edda;
-            color: #155724;
+        /* Intent Tag Colors - Matching chart colors exactly */
+        .intent-feature-improve-request {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
             border-color: #28a745;
+            font-weight: 600;
         }
         
-        .intent-버그-report {
-            background: #f8d7da;
-            color: #721c24;
+        .intent-bug-report {
+            background: rgba(220, 53, 69, 0.15);
+            color: #dc3545;
             border-color: #dc3545;
+            font-weight: 600;
         }
         
-        .intent-성능 {
-            background: #fff3cd;
-            color: #856404;
+        .intent-performance {
+            background: rgba(255, 193, 7, 0.15);
+            color: #e6a800;
             border-color: #ffc107;
+            font-weight: 600;
         }
         
-        .intent-긍정-feedback {
-            background: #d1ecf1;
-            color: #0c5460;
+        .intent-positive-feedback {
+            background: rgba(23, 162, 184, 0.15);
+            color: #17a2b8;
             border-color: #17a2b8;
+            font-weight: 600;
         }
         
-        .intent-부정-feedback {
-            background: #e2e3f1;
-            color: #383d41;
+        .intent-negative-feedback {
+            background: rgba(111, 66, 193, 0.15);
+            color: #6f42c1;
             border-color: #6f42c1;
+            font-weight: 600;
         }
         
-        .intent-기타 {
-            background: #e2e3e5;
-            color: #383d41;
+        .intent-etc {
+            background: rgba(108, 117, 125, 0.15);
+            color: #6c757d;
             border-color: #6c757d;
+            font-weight: 600;
+        }
+        
+        /* Fallback for any unmapped intent labels */
+        .intent-tag:not([class*="intent-feature"]):not([class*="intent-bug"]):not([class*="intent-performance"]):not([class*="intent-positive"]):not([class*="intent-negative"]):not([class*="intent-etc"]) {
+            background: #f8f9fa;
+            color: #495057;
+            border-color: #dee2e6;
         }
         
         /* Tab Styles */
@@ -825,6 +839,7 @@
                     <h3>📈 카테고리별 상세 분석</h3>
                     <div class="category-grid">
                         {% for intent, count in intent_summary.intent_distribution.items() %}
+                        {% set percentage = ((count / intent_summary.total_reviews * 100)|round(1)) %}
                         <div class="category-card">
                             <div class="category-header">
                                 <span class="category-icon">
@@ -839,9 +854,9 @@
                             </div>
                             <div class="category-stats-content">
                                 <div class="category-count">{{ count }}건</div>
-                                <div class="category-percentage">{{ "%.1f"|format((count / intent_summary.total_reviews * 100)) }}%</div>
+                                <div class="category-percentage">{{ percentage }}%</div>
                                 <div class="category-bar">
-                                    <div class="category-bar-fill" style="width: {{ "%.1f"|format((count / intent_summary.total_reviews * 100)) }}%"></div>
+                                    <div class="category-bar-fill" data-width="{{ percentage }}"></div>
                                 </div>
                             </div>
                         </div>
@@ -929,7 +944,7 @@
                                     </td>
                                     {% if has_intents %}
                                     <td>
-                                        <span class="intent-tag intent-{{ review.intent_label|replace(' ', '-')|replace('개선', 'improve')|replace('제보', 'report')|replace('피드백', 'feedback') }}">
+                                        <span class="intent-tag intent-{{ review.intent_label|replace('기능 개선 요청', 'feature-improve-request')|replace('버그 제보', 'bug-report')|replace('성능', 'performance')|replace('긍정 피드백', 'positive-feedback')|replace('부정 피드백', 'negative-feedback')|replace('기타', 'etc')|replace(' ', '-') }}">
                                             {{ review.intent_label or '기타' }}
                                         </span>
                                     </td>
@@ -1108,6 +1123,13 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Set category bar widths from data attributes
+            const categoryBars = document.querySelectorAll('.category-bar-fill[data-width]');
+            categoryBars.forEach(bar => {
+                const width = bar.getAttribute('data-width');
+                bar.style.width = width + '%';
+            });
+            
             // Initialize sorting for all tables
             const tables = document.querySelectorAll('.reviewTable');
             

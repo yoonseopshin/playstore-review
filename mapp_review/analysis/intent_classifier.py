@@ -269,15 +269,32 @@ class IntentClassifier:
             
             intent_counts = df['intent_label'].value_counts()
             
-            # Create pie chart
-            colors = ['#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1']
+            # Fixed color mapping for consistent visualization
+            intent_color_map = {
+                '기능 개선 요청': '#28a745',
+                '버그 제보': '#dc3545', 
+                '성능': '#ffc107',
+                '긍정 피드백': '#17a2b8',
+                '부정 피드백': '#6f42c1'
+            }
+            
+            # Create ordered lists for consistent color mapping
+            labels = []
+            values = []
+            colors = []
+            
+            for intent in intent_counts.index:
+                labels.append(intent)
+                values.append(intent_counts[intent])
+                colors.append(intent_color_map.get(intent, '#6c757d'))  # Default gray for unknown intents
+            
             fig = go.Figure(data=[
                 go.Pie(
-                    labels=intent_counts.index,
-                    values=intent_counts.values,
+                    labels=labels,
+                    values=values,
                     hole=0.4,  # Donut chart style
                     marker=dict(
-                        colors=colors[:len(intent_counts)],
+                        colors=colors,
                         line=dict(color='#FFFFFF', width=2)
                     ),
                     textinfo='label+percent',

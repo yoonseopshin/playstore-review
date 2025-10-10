@@ -21,45 +21,45 @@ class ChartGenerator:
     
     def create_summary_chart(self, df: pd.DataFrame, output_dir: str, 
                             start_date: datetime.date, end_date: datetime.date) -> str:
-        """Create time series summary chart with platform comparison"""
+        """Create combined dual-axis chart with review counts and average ratings"""
         
         # Prepare data
         df['date'] = df['at'].dt.date
         
-        # Create figure with subplots
-        sns.set(style="whitegrid")
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10))
+        # Create figure with single plot - modern styling
+        sns.set_style("whitegrid")
+        plt.rcParams['axes.spines.top'] = False
+        plt.rcParams['axes.spines.right'] = False
+        fig, ax1 = plt.subplots(1, 1, figsize=(14, 8))
+        fig.patch.set_facecolor('white')
         
-        # Chart 1: Daily average scores by platform
+        # Define modern UI colors for better visualization
+        platform_colors = {
+            'Google Play Store': {
+                'bar': '#3b82f6',      # Modern Blue
+                'line': '#1d4ed8'      # Deep Blue
+            },
+            'Apple App Store': {
+                'bar': '#f59e0b',      # Amber/Orange
+                'line': '#d97706'      # Deep Orange
+            }
+        }
+        
         if 'platform' in df.columns:
+            # Prepare data for both metrics
+            daily_count_platform = df.groupby(['date', 'platform']).size().reset_index(name='count')
             daily_score_platform = df.groupby(['date', 'platform'])['score'].mean().reset_index()
             
-            for platform in df['platform'].unique():
-                platform_data = daily_score_platform[daily_score_platform['platform'] == platform]
-                color = '#1f77b4' if 'Google' in platform else '#ff7f0e'
-                ax1.plot(platform_data['date'], platform_data['score'], 
-                        marker='o', label=f'{platform} 평균 별점', color=color, linewidth=2)
-        else:
-            daily_score = df.groupby('date')['score'].mean().reset_index()
-            ax1.plot(daily_score['date'], daily_score['score'], marker='o', label='평균 별점')
-        
-        ax1.set_xlabel("날짜", fontname=self.font_name)
-        ax1.set_ylabel("평균 별점", fontname=self.font_name)
-        ax1.set_title(f"플랫폼별 일일 평균 별점 ({start_date} ~ {end_date})", fontname=self.font_name, fontsize=14, fontweight='bold')
-        ax1.legend(prop={"family": self.font_name})
-        ax1.tick_params(axis='x', rotation=45)
-        ax1.grid(True, alpha=0.3)
-        
-        # Chart 2: Daily review counts by platform
-        if 'platform' in df.columns:
-            daily_count_platform = df.groupby(['date', 'platform']).size().reset_index(name='count')
-            
-            # Create stacked bar chart
             platforms = df['platform'].unique()
             dates = sorted(df['date'].unique())
             
-            bottom = None
-            colors = ['#1f77b4', '#ff7f0e']
+            # Left axis (ax1): Review counts (Bar chart)
+            ax1.set_xlabel("날짜", fontname=self.font_name, fontsize=12)
+            ax1.set_ylabel("일일 리뷰 수", fontname=self.font_name, fontsize=12)
+            
+            # Create grouped bar chart for review counts
+            bar_width = 0.35
+            x_positions = range(len(dates))
             
             for i, platform in enumerate(platforms):
                 platform_counts = []
@@ -70,29 +70,84 @@ class ChartGenerator:
                     ]['count'].sum()
                     platform_counts.append(count)
                 
-                ax2.bar(dates, platform_counts, label=f'{platform} 리뷰 수', 
-                       bottom=bottom, color=colors[i % len(colors)], alpha=0.8)
+                # Offset bars for each platform
+                offset_positions = [x + (i - 0.5) * bar_width for x in x_positions]
+                colors = platform_colors.get(platform, {'bar': '#1f77b4', 'line': '#1f77b4'})
+                bar_color = colors['bar']
                 
-                if bottom is None:
-                    bottom = platform_counts
-                else:
-                    bottom = [b + c for b, c in zip(bottom, platform_counts)]
+                ax1.bar(offset_positions, platform_counts, 
+                       width=bar_width, label=f'{platform} 리뷰 수', 
+                       color=bar_color, alpha=0.85, edgecolor='white', linewidth=1.5,
+                       capstyle='round')
+            
+            # Right axis (ax2): Average ratings (Line chart)
+            ax2 = ax1.twinx()
+            ax2.set_ylabel("평균 별점", fontname=self.font_name, fontsize=12)
+            ax2.set_ylim(0, 5.5)  # Rating scale from 0 to 5
+            
+            for platform in platforms:
+                platform_data = daily_score_platform[daily_score_platform['platform'] == platform]
+                
+                # Match dates with x_positions
+                platform_scores = []
+                platform_x_pos = []
+                for i, date in enumerate(dates):
+                    score_data = platform_data[platform_data['date'] == date]
+                    if not score_data.empty:
+                        platform_scores.append(score_data['score'].iloc[0])
+                        platform_x_pos.append(i)
+                
+                if platform_scores:  # Only plot if there's data
+                    colors = platform_colors.get(platform, {'bar': '#1f77b4', 'line': '#1f77b4'})
+                    line_color = colors['line']
+                    
+                    ax2.plot(platform_x_pos, platform_scores, 
+                            marker='o', label=f'{platform} 평균 별점', 
+                            color=line_color, linewidth=3.5, markersize=10,
+                            markerfacecolor='white', markeredgecolor=line_color, 
+                            markeredgewidth=2.5, alpha=0.9)
+            
+            # Set x-axis labels
+            ax1.set_xticks(x_positions)
+            ax1.set_xticklabels([str(date) for date in dates], rotation=45, ha='right')
+            
         else:
+            # Fallback for single platform
             daily_count = df.groupby('date').size().reset_index(name='count')
-            ax2.bar(daily_count['date'], daily_count['count'], alpha=0.8, label='리뷰 수', color='skyblue')
+            daily_score = df.groupby('date')['score'].mean().reset_index()
+            
+            ax1.bar(daily_count['date'], daily_count['count'], alpha=0.85, label='리뷰 수', 
+                   color='#3b82f6', edgecolor='white', linewidth=1.5)
+            ax1.set_ylabel("리뷰 수", fontname=self.font_name)
+            
+            ax2 = ax1.twinx()
+            ax2.plot(daily_score['date'], daily_score['score'], marker='o', label='평균 별점', 
+                    color='#1d4ed8', linewidth=3.5, markersize=10,
+                    markerfacecolor='white', markeredgecolor='#1d4ed8', markeredgewidth=2.5, alpha=0.9)
+            ax2.set_ylabel("평균 별점", fontname=self.font_name)
         
-        ax2.set_xlabel("날짜", fontname=self.font_name)
-        ax2.set_ylabel("리뷰 수", fontname=self.font_name)
-        ax2.set_title(f"플랫폼별 일일 리뷰 수 ({start_date} ~ {end_date})", fontname=self.font_name, fontsize=14, fontweight='bold')
-        ax2.legend(prop={"family": self.font_name})
-        ax2.tick_params(axis='x', rotation=45)
-        ax2.grid(True, alpha=0.3)
+        # Title and styling
+        ax1.set_title(f"플랫폼별 일일 리뷰 수 및 평균 별점 ({start_date} ~ {end_date})", 
+                     fontname=self.font_name, fontsize=16, fontweight='bold', pad=20)
+        
+        # Grid styling
+        ax1.grid(True, alpha=0.2, linestyle='-', linewidth=0.8, color='#e5e7eb')
+        ax2.grid(False)  # Disable grid on secondary axis
+        
+        # Modern legend styling
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        legend = ax1.legend(lines1 + lines2, labels1 + labels2, 
+                           loc='upper left', prop={"family": self.font_name, "size": 11}, 
+                           frameon=True, fancybox=True, shadow=False,
+                           facecolor='white', edgecolor='#d1d5db', framealpha=0.95)
+        legend.get_frame().set_linewidth(1.2)
         
         plt.tight_layout()
         
         # Save chart
         summary_img = os.path.join(output_dir, f"mapp_summary_{start_date}_{end_date}.png")
-        plt.savefig(summary_img, dpi=150, bbox_inches='tight')
+        plt.savefig(summary_img, dpi=150, bbox_inches='tight', facecolor='white')
         plt.close()
         print(f"Mobile app summary visualization saved: {summary_img}")
         return summary_img
