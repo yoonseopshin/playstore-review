@@ -85,15 +85,8 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store...")
                 start_time = time.time()
                 
-                # Simple location check for logging
-                import os
-                try:
-                    if os.getenv('GITHUB_ACTIONS'):
-                        print(f"  🔧 GitHub Actions environment - Korean proxy will be used if not in KR")
-                    else:
-                        print(f"  🏠 Local environment - direct connection")
-                except Exception as e:
-                    print(f"  ⚠️  Environment check failed: {e}")
+                # Direct request to Google Play Store
+                print(f"  🌐 Making direct request to Google Play Store...")
                 
                 # Simple request without any manipulation
                 result, continuation_token = reviews(
