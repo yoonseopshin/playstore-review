@@ -34,3 +34,18 @@ jobs:
           source venv/bin/activate
           echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
           echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install Dependencies
+        run: |
+          source venv/bin/activate
+          echo "📦 Installing dependencies in virtual environment..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Environment Check
+        run: |
+          source venv/bin/activate
+          echo "📦 Virtual environment: $VIRTUAL_ENV"
+          echo "📦 Python path: $(which python)"
+          echo "📦 Installed packages:"
+          pip list | grep -E "(google|play|scraper)" || echo "No matching packages"
