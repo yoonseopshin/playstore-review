@@ -44,7 +44,7 @@ def main():
         print(f"   • Analysis Days: {Config.DAYS}")
         
         print(f"\n🏪 Collecting Play Store reviews...")
-        playstore_reviews = playstore_crawler.collect_reviews(Config.REVIEW_COUNT)
+        playstore_reviews = playstore_crawler.collect_reviews(Config.REVIEW_COUNT, Config.DAYS)
         
         print(f"\n🍎 Collecting App Store reviews...")
         appstore_reviews = appstore_crawler.collect_reviews()

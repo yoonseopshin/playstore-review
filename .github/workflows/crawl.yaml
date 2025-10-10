@@ -44,23 +44,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Network and Environment Check
+      - name: Environment Check
         run: |
-          echo "🌐 Network connectivity check..."
-          ping -c 3 google.com || echo "❌ Google ping failed"
-          ping -c 3 play.google.com || echo "❌ Play Store ping failed"
           echo "📦 Installed packages:"
           pip list | grep -E "(google|play|scraper)" || echo "No matching packages"
-          echo "🔍 DNS resolution test:"
-          nslookup play.google.com || echo "❌ DNS resolution failed"
 
       - name: Run MAPP Crawler with Debug
         run: |
           echo "🚀 Starting MAPP Crawler with enhanced debugging..."
+          echo "📊 Configuration:"
+          echo "   • REVIEW_COUNT: ${REVIEW_COUNT}"
+          echo "   • ANALYSIS_DAYS: ${ANALYSIS_DAYS}"
           python -u main.py
         env:
           PYTHONUNBUFFERED: 1
           DEBUG_MODE: 1
+          REVIEW_COUNT: 500  # Reduce count to get fresher results
+          ANALYSIS_DAYS: 7
 
       - name: Rename HTML file to index.html
         run: |

@@ -94,7 +94,7 @@ class ReviewFilter:
             print(f"💡 Suggestions:")
             print(f"   • Check if the date range is correct")
             print(f"   • Verify review dates from the source")
-            print(f"   • Consider increasing the analysis days")
+            print(f"   • Consider increasing the analysis days (currently {self.days} days)")
             return None
         
         # Print platform breakdown

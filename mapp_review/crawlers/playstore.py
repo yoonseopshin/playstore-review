@@ -16,12 +16,13 @@ class PlayStoreCrawler(BaseCrawler):
         super().__init__(app_package)
         self.app_package = app_package
     
-    def collect_reviews(self, count: int = 100) -> List[Dict]:
+    def collect_reviews(self, count: int = 100, target_days: int = 7) -> List[Dict]:
         """
         Collect reviews from Google Play Store with enhanced debugging
         
         Args:
             count: Number of reviews to collect
+            target_days: Number of recent days to focus on
             
         Returns:
             List of review dictionaries
@@ -29,6 +30,7 @@ class PlayStoreCrawler(BaseCrawler):
         print(f"🔍 === PLAY STORE DEBUG INFO ===")
         print(f"📱 App Package: {self.app_package}")
         print(f"📊 Requested Count: {count}")
+        print(f"📅 Target Days: {target_days}")
         
         # Environment debugging
         import os
@@ -61,13 +63,29 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store...")
                 start_time = time.time()
                 
+                # Try to get more recent reviews by using multiple smaller requests
+                print(f"  📡 Making request to Google Play Store (Sort: NEWEST)...")
                 result, continuation_token = reviews(
                     self.app_package,
                     lang='ko',
                     country='kr',
                     sort=Sort.NEWEST,
-                    count=count
+                    count=min(count, 200)  # Limit initial request to get fresher results
                 )
+                
+                # If we need more reviews and have a continuation token, get more
+                if len(result) < count and continuation_token:
+                    print(f"  🔄 Getting additional reviews with continuation token...")
+                    additional_result, _ = reviews(
+                        self.app_package,
+                        lang='ko',
+                        country='kr',
+                        sort=Sort.NEWEST,
+                        count=count - len(result),
+                        continuation_token=continuation_token
+                    )
+                    result.extend(additional_result)
+                    print(f"  📦 Total after continuation: {len(result)} reviews")
                 
                 end_time = time.time()
                 print(f"  ⏱️  Request completed in {end_time - start_time:.2f}s")
@@ -82,9 +100,28 @@ class PlayStoreCrawler(BaseCrawler):
                     print(f"     • Date: {sample_review.get('at')}")
                     print(f"     • Content length: {len(sample_review.get('content', ''))}")
                 
+                # Sort by date to ensure we have the most recent reviews first
+                print(f"  📅 Sorting reviews by date (newest first)...")
+                result_with_dates = []
+                for review in result:
+                    review_date = review.get('at')
+                    if review_date:
+                        result_with_dates.append((review_date, review))
+                
+                # Sort by date (newest first)
+                result_with_dates.sort(key=lambda x: x[0], reverse=True)
+                sorted_result = [review for _, review in result_with_dates]
+                
+                print(f"  📊 Date range analysis:")
+                if sorted_result:
+                    newest_date = sorted_result[0].get('at')
+                    oldest_date = sorted_result[-1].get('at')
+                    print(f"     • Newest: {newest_date}")
+                    print(f"     • Oldest: {oldest_date}")
+                
                 # Standardize format
                 standardized_reviews = []
-                for i, review in enumerate(result):
+                for i, review in enumerate(sorted_result):
                     # Try multiple version fields
                     version = (review.get('reviewCreatedVersion') or 
                               review.get('appVersionCode') or 
@@ -102,10 +139,10 @@ class PlayStoreCrawler(BaseCrawler):
                     standardized_reviews.append(standardized_review)
                     
                     # Debug first few processed reviews
-                    if i < 3:
+                    if i < 5:
                         print(f"     • Review {i+1}: {standardized_review['at']} - Score: {standardized_review['score']}")
                 
-                print(f"✅ Successfully fetched {len(standardized_reviews)} reviews from Play Store")
+                print(f"✅ Successfully fetched and sorted {len(standardized_reviews)} reviews from Play Store")
                 print(f"🔍 === END PLAY STORE DEBUG ===")
                 return standardized_reviews
                 
@@ -125,7 +162,7 @@ class PlayStoreCrawler(BaseCrawler):
                     print(f"   • Network connectivity issues")
                     print(f"   • Changes in Google Play Store API")
                     print(f"   • Invalid app package: {self.app_package}")
-                    print(f"ℹ️  Continuing with App Store reviews only...")
+                    print(f"ℹ️  Continuing with App Store reviews only for {target_days} days analysis...")
                     return []
                 else:
                     retry_delay = 2 + attempt
