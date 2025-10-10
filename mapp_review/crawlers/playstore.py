@@ -85,31 +85,15 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store...")
                 start_time = time.time()
                 
-                # Check current location and use proxy if not in Korea
+                # Simple location check for logging
                 import os
-                import requests
-                
                 try:
-                    # Check current IP location
-                    response = requests.get('https://ipapi.co/json/', timeout=5)
-                    if response.status_code == 200:
-                        location_info = response.json()
-                        country_code = location_info.get('country_code', '').upper()
-                        country_name = location_info.get('country_name', 'Unknown')
-                        city = location_info.get('city', 'Unknown')
-                        
-                        print(f"  🌍 Current location: {city}, {country_name} ({country_code})")
-                        
-                        if country_code != 'KR':
-                            print(f"  🚀 Not in Korea - proxy will be used automatically by proxychains4")
-                            if os.getenv('GITHUB_ACTIONS'):
-                                print(f"  🔧 GitHub Actions environment detected")
-                        else:
-                            print(f"  🇰🇷 Already in Korea - direct connection will be used")
+                    if os.getenv('GITHUB_ACTIONS'):
+                        print(f"  🔧 GitHub Actions environment - Korean proxy will be used if not in KR")
                     else:
-                        print(f"  ⚠️  Could not determine location, proceeding with current setup")
+                        print(f"  🏠 Local environment - direct connection")
                 except Exception as e:
-                    print(f"  ⚠️  Location check failed: {e}, proceeding with current setup")
+                    print(f"  ⚠️  Environment check failed: {e}")
                 
                 # Simple request without any manipulation
                 result, continuation_token = reviews(

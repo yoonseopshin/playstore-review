@@ -55,15 +55,19 @@ jobs:
           sudo tee /etc/proxychains4.conf > /dev/null <<EOF
           dynamic_chain
           proxy_dns
-          tcp_read_time_out 15000
-          tcp_connect_time_out 8000
+          tcp_read_time_out 5000
+          tcp_connect_time_out 3000
           [ProxyList]
-          # Korean free proxies (dynamic_chain will try each until one works)
+          # Korean proxies only
           http 121.78.139.75 8080
           http 175.126.123.219 8080
           http 211.249.220.24 8080
           http 58.229.183.61 3128
           http 175.126.232.92 8080
+          http 220.230.108.108 3128
+          http 175.126.232.93 8080
+          http 121.78.139.77 8080
+          http 211.249.220.25 8080
           EOF
           
           echo "✅ Proxy configuration completed"
@@ -78,8 +82,12 @@ jobs:
           echo "Current IP:"
           curl -s https://ipapi.co/json/ | jq '.ip, .country_name, .city' || echo "Direct connection"
           
-          echo "Proxy IP (if working):"
-          proxychains4 curl -s https://ipapi.co/json/ | jq '.ip, .country_name, .city' || echo "Proxy failed"
+          echo "Testing individual Korean proxies:"
+          # Test each proxy individually with short timeout
+          for proxy in "121.78.139.75:8080" "175.126.123.219:8080" "211.249.220.24:8080"; do
+            echo "Testing $proxy..."
+            timeout 5 curl -x http://$proxy -s https://httpbin.org/ip || echo "$proxy failed"
+          done
 
       - name: Run MAPP Crawler with Debug
         run: |
@@ -94,13 +102,8 @@ jobs:
           echo "Current country code: $COUNTRY"
           
           if [ "$COUNTRY" != "KR" ]; then
-            echo "🌏 Not in Korea - using proxy..."
-            if proxychains4 python -u main.py; then
-              echo "✅ Proxy execution successful"
-            else
-              echo "❌ Proxy execution failed, trying direct connection..."
-              python -u main.py
-            fi
+            echo "🌏 Not in Korea - using Korean proxy only..."
+            proxychains4 python -u main.py
           else
             echo "🇰🇷 Already in Korea - using direct connection..."
             python -u main.py
