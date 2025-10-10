@@ -24,22 +24,36 @@ jobs:
           echo "Python version: $(python3 --version)"
           echo "Pip version: $(pip3 --version)"
 
+      - name: Setup Virtual Environment
+        run: |
+          echo "🐍 Setting up Python virtual environment..."
+          python3 -m venv venv
+          source venv/bin/activate
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
+          
       - name: Install Dependencies
         run: |
-          python3 -m pip install --upgrade pip
-          pip3 install -r requirements.txt
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
       - name: Environment Check
         run: |
+          source venv/bin/activate
+          echo "📦 Virtual environment: $VIRTUAL_ENV"
+          echo "📦 Python path: $(which python)"
           echo "📦 Installed packages:"
           pip list | grep -E "(google|play|scraper)" || echo "No matching packages"
 
       - name: Run MAPP Crawler with Debug
         run: |
+          source venv/bin/activate
           echo "🚀 Starting MAPP Crawler with enhanced debugging..."
           echo "📊 Configuration:"
           echo "   • REVIEW_COUNT: ${REVIEW_COUNT}"
           echo "   • ANALYSIS_DAYS: ${ANALYSIS_DAYS}"
-          python3 -u main.py
+          echo "🐍 Using virtual environment: $VIRTUAL_ENV"
+          python -u main.py
         env:
           PYTHONUNBUFFERED: 1
           DEBUG_MODE: 1
