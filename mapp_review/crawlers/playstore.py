@@ -85,46 +85,26 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store...")
                 start_time = time.time()
                 
-                # Set a more realistic User-Agent to avoid bot detection
+                # Simulate Korean user to bypass regional caching
                 import os
                 original_user_agent = os.environ.get('USER_AGENT')
-                os.environ['USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 
-                # Try to get more recent reviews by using multiple smaller requests
-                print(f"  📡 Making request to Google Play Store (Sort: NEWEST)...")
+                # Set Korean User-Agent and headers
+                os.environ['USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                
+                print(f"  🇰🇷 Making request as Korean user...")
                 print(f"  🕵️  Using User-Agent: {os.environ.get('USER_AGENT')}")
-                
-                # Use the EXACT same request as local environment
-                request_count = min(count, 200)
-                print(f"  🇰🇷 Making Korean request (same as local)...")
-                print(f"     • app_package: {self.app_package}")
-                print(f"     • lang: ko")
-                print(f"     • country: kr") 
-                print(f"     • sort: NEWEST")
-                print(f"     • count: {request_count}")
                 
                 result, continuation_token = reviews(
                     self.app_package,
                     lang='ko',
                     country='kr',
                     sort=Sort.NEWEST,
-                    count=request_count
+                    count=min(count, 200)
                 )
                 
                 print(f"  📊 Korean request result - Latest review: {result[0].get('at') if result else 'None'}")
                 print(f"  📦 Korean request count: {len(result)}")
-                
-                # For debugging: also check what global gives us
-                try:
-                    print(f"  🌍 [DEBUG] Checking global for comparison...")
-                    global_result, _ = reviews(
-                        self.app_package,
-                        sort=Sort.NEWEST,
-                        count=50
-                    )
-                    print(f"  📊 [DEBUG] Global latest: {global_result[0].get('at') if global_result else 'None'}")
-                except Exception as e:
-                    print(f"  ❌ [DEBUG] Global check failed: {e}")
                 
                 # Restore original User-Agent
                 if original_user_agent:

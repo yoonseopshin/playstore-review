@@ -59,7 +59,7 @@ jobs:
         env:
           PYTHONUNBUFFERED: 1
           DEBUG_MODE: 1
-          REVIEW_COUNT: 500  # Reduce count to get fresher results
+          REVIEW_COUNT: 500
           ANALYSIS_DAYS: 7
 
       - name: Rename HTML file to index.html
