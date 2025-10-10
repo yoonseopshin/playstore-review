@@ -33,12 +33,20 @@ class ReviewFilter:
         
         # Ensure we have the required columns
         required_columns = ['userName', 'content', 'score', 'at', 'platform']
+        optional_columns = ['version']  # Optional columns that should be preserved if present
+        
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             print(f"❌ Missing required columns: {missing_columns}")
             return None
         
-        df = df[required_columns]
+        # Include optional columns if they exist
+        columns_to_keep = required_columns.copy()
+        for col in optional_columns:
+            if col in df.columns:
+                columns_to_keep.append(col)
+        
+        df = df[columns_to_keep]
         df.rename(columns={'content': 'review'}, inplace=True)
         df['at'] = pd.to_datetime(df['at'])
         

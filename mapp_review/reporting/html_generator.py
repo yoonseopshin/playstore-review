@@ -34,6 +34,10 @@ class HTMLReportGenerator:
                 columns_to_drop.append('intent')
                 
             df_for_html = df.drop(columns=[col for col in columns_to_drop if col in df.columns]).copy()
+            
+            # Ensure version column exists
+            if 'version' not in df_for_html.columns:
+                df_for_html['version'] = 'Unknown'
             df_for_html['at'] = df_for_html['at'].dt.strftime('%Y-%m-%d %H:%M:%S')
             
             # Convert DataFrame to list of dictionaries for Jinja2

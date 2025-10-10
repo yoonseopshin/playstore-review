@@ -15,6 +15,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 try:
     from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
     import torch
+    # Suppress transformers warnings about uninitialized weights
+    import logging
+    logging.getLogger("transformers").setLevel(logging.ERROR)
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False

@@ -550,6 +550,25 @@
             background: #000000;
             color: white;
         }
+        
+        /* Version Badge */
+        .version-badge {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-weight: 500;
+            display: inline-block;
+            border: 1px solid #dee2e6;
+            transition: all 0.2s ease;
+        }
+        
+        .version-badge:hover {
+            background: #dee2e6;
+            border-color: #adb5bd;
+        }
 
         /* Responsive Design */
         @media (max-width: 768px) {
@@ -877,6 +896,7 @@
                                 <tr>
                                     <th class="sortable" data-column="userName">사용자명</th>
                                     <th class="sortable" data-column="platform">플랫폼</th>
+                                    <th class="sortable" data-column="version">앱 버전</th>
                                     <th class="sortable" data-column="review">리뷰 내용</th>
                                     <th class="sortable" data-column="score">별점</th>
                                     {% if has_intents %}
@@ -892,6 +912,11 @@
                                     <td>
                                         <span class="platform-badge {% if 'Google' in review.platform %}platform-google{% else %}platform-apple{% endif %}">
                                             {% if 'Google' in review.platform %}🤖 Play Store{% else %}🍎 App Store{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="version-badge">
+                                            {{ review.version or 'Unknown' }}
                                         </span>
                                     </td>
                                     <td class="review-content">{{ review.review }}</td>
@@ -924,6 +949,7 @@
                             <thead>
                                 <tr>
                                     <th>사용자명</th>
+                                    <th>앱 버전</th>
                                     <th>리뷰 내용</th>
                                     <th>별점</th>
                                     <th>작성일시</th>
@@ -934,6 +960,11 @@
                                 {% if 'Google' in review.platform %}
                                 <tr>
                                     <td>{{ review.userName }}</td>
+                                    <td>
+                                        <span class="version-badge">
+                                            {{ review.version or 'Unknown' }}
+                                        </span>
+                                    </td>
                                     <td class="review-content">{{ review.review }}</td>
                                     <td>
                                         <span style="color: #ffc107;">
@@ -958,6 +989,7 @@
                             <thead>
                                 <tr>
                                     <th>사용자명</th>
+                                    <th>앱 버전</th>
                                     <th>리뷰 내용</th>
                                     <th>별점</th>
                                     <th>작성일시</th>
@@ -968,6 +1000,11 @@
                                 {% if 'Apple' in review.platform %}
                                 <tr>
                                     <td>{{ review.userName }}</td>
+                                    <td>
+                                        <span class="version-badge">
+                                            {{ review.version or 'Unknown' }}
+                                        </span>
+                                    </td>
                                     <td class="review-content">{{ review.review }}</td>
                                     <td>
                                         <span style="color: #ffc107;">
@@ -1007,7 +1044,7 @@
             const hasTopics = JSON.parse(document.getElementById('has-topics-data').textContent);
             
             // CSV Header - always include topics column if available
-            let headers = ['사용자명', '플랫폼', '리뷰내용', '별점'];
+            let headers = ['사용자명', '플랫폼', '앱버전', '리뷰내용', '별점'];
             if (hasTopics) {
                 headers.push('주제');
             }
@@ -1020,6 +1057,7 @@
                 let row = [
                     `"${review.userName || ''}"`,
                     `"${review.platform || ''}"`,
+                    `"${review.version || 'Unknown'}"`,
                     `"${(review.review || '').replace(/"/g, '""')}"`,
                     review.score || 0
                 ];
@@ -1078,6 +1116,11 @@
                 const tbody = table.querySelector('tbody');
                 const headers = table.querySelectorAll('th.sortable');
                 
+                // Check if intent column exists by looking at the table headers
+                const hasIntents = Array.from(table.querySelectorAll('th')).some(th => 
+                    th.dataset.column === 'intent_label'
+                );
+                
                 headers.forEach(header => {
                     let ascending = true;
                     
@@ -1103,22 +1146,27 @@
                                     aVal = a.cells[1].textContent.trim();
                                     bVal = b.cells[1].textContent.trim();
                                     break;
+                                case 'version':
+                                    aVal = a.cells[2].textContent.trim();
+                                    bVal = b.cells[2].textContent.trim();
+                                    break;
                                 case 'review':
-                                    aVal = a.cells[2].textContent.trim().length;
-                                    bVal = b.cells[2].textContent.trim().length;
+                                    aVal = a.cells[3].textContent.trim().length;
+                                    bVal = b.cells[3].textContent.trim().length;
                                     break;
                                 case 'score':
-                                    aVal = parseInt(a.cells[3].textContent.trim().split(' ').pop());
-                                    bVal = parseInt(b.cells[3].textContent.trim().split(' ').pop());
+                                    aVal = parseInt(a.cells[4].textContent.trim().split(' ').pop());
+                                    bVal = parseInt(b.cells[4].textContent.trim().split(' ').pop());
                                     break;
-                                case 'topic_label':
-                                    if (hasTopics) {
-                                        aVal = a.cells[4].textContent.trim();
-                                        bVal = b.cells[4].textContent.trim();
+                                case 'intent_label':
+                                    if (hasIntents) {
+                                        aVal = a.cells[5].textContent.trim();
+                                        bVal = b.cells[5].textContent.trim();
                                     }
                                     break;
                                 case 'at':
-                                    const dateColIndex = hasTopics ? 5 : 4;
+                                    // Calculate correct date column index based on whether intent column exists
+                                    const dateColIndex = hasIntents ? 6 : 5;
                                     aVal = new Date(a.cells[dateColIndex].textContent.trim());
                                     bVal = new Date(b.cells[dateColIndex].textContent.trim());
                                     break;

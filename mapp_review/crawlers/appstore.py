@@ -90,9 +90,29 @@ class AppStoreCrawler(BaseCrawler):
         try:
             # Parse rating from title (usually format: "★★★★☆ - Title")
             title = entry.get('title', '')
-            rating = 0
+            rating = None  # Default to None if we can't parse rating
+            
+            # Try multiple methods to extract rating
             if '★' in title:
                 rating = title.count('★')
+            elif hasattr(entry, 'im_rating'):
+                # iTunes specific rating field
+                try:
+                    rating = int(float(entry.im_rating))
+                except (ValueError, TypeError):
+                    pass
+            elif hasattr(entry, 'rating'):
+                # Generic rating field
+                try:
+                    rating = int(float(entry.rating))
+                except (ValueError, TypeError):
+                    pass
+            
+            # If we couldn't parse rating, skip this entry as it's likely invalid
+            # App Store requires rating for reviews, so 0 rating entries are parsing errors
+            if rating is None or rating == 0:
+                print(f"  ⚠️ Skipping entry with no valid rating: {title[:50]}...")
+                return None
             
             # Get review content
             content = ''
@@ -104,6 +124,16 @@ class AppStoreCrawler(BaseCrawler):
             # Clean content (remove HTML tags if any)
             content = re.sub(r'<[^>]+>', '', content) if content else ''
             
+            # Try to get version from im:version tag (iTunes specific)
+            version_from_tag = None
+            if hasattr(entry, 'im_version'):
+                version_from_tag = entry.im_version
+            elif hasattr(entry, 'tags'):
+                for tag in entry.tags:
+                    if 'version' in tag.get('term', '').lower():
+                        version_from_tag = tag.get('term', '')
+                        break
+            
             # Get author name
             author = entry.get('author', 'Anonymous')
             
@@ -114,12 +144,40 @@ class AppStoreCrawler(BaseCrawler):
             elif hasattr(entry, 'published_parsed') and entry.published_parsed:
                 date = datetime(*entry.published_parsed[:6])
             
+            # Try to extract version from content or title
+            version = 'Unknown'
+            
+            # First, try version from RSS tag
+            if version_from_tag:
+                version = version_from_tag
+            else:
+                # Look for version patterns in content like "Version 1.2.3" or "v1.2.3"
+                version_patterns = [
+                    r'[Vv]ersion\s+(\d+\.\d+(?:\.\d+)?)',
+                    r'[Vv]\s*(\d+\.\d+(?:\.\d+)?)',
+                    r'앱\s*버전\s*(\d+\.\d+(?:\.\d+)?)',
+                    r'버전\s*(\d+\.\d+(?:\.\d+)?)',
+                    r'(\d+\.\d+\.\d+)',  # Simple pattern like 1.2.3
+                    r'(\d+\.\d+)'        # Simple pattern like 1.2
+                ]
+                
+                search_text = content + ' ' + title
+                for pattern in version_patterns:
+                    match = re.search(pattern, search_text)
+                    if match:
+                        version = match.group(1)
+                        break
+                
+                # If no version found in content, keep as Unknown
+            
+            
             return {
                 'userName': author,
                 'content': content,
                 'score': rating,
                 'at': date,
-                'platform': self.get_platform_name()
+                'platform': self.get_platform_name(),
+                'version': version
             }
             
         except Exception as e:
