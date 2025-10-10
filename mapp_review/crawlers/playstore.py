@@ -85,48 +85,7 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store...")
                 start_time = time.time()
                 
-                # Simulate Korean user to bypass regional caching
-                import os
-                original_user_agent = os.environ.get('USER_AGENT')
-                
-                # Set Korean User-Agent and location headers to simulate Korean user
-                os.environ['USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                
-                # Try to set additional headers that might indicate Korean location
-                # Note: google-play-scraper might not support custom headers, but worth trying
-                korean_headers = {
-                    'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8',
-                    'CF-IPCountry': 'KR',  # Cloudflare country header
-                    'X-Forwarded-For': '211.249.220.24',  # Korean IP example
-                    'X-Real-IP': '211.249.220.24',
-                    'CF-Connecting-IP': '211.249.220.24'
-                }
-                
-                print(f"  🇰🇷 Making request as Korean user...")
-                print(f"  🕵️  Using User-Agent: {os.environ.get('USER_AGENT')}")
-                print(f"  🌏 Attempting to spoof Korean location with headers...")
-                
-                # Set environment variables that might be used by requests
-                for header, value in korean_headers.items():
-                    os.environ[f'HTTP_{header.upper().replace("-", "_")}'] = value
-                
-                # Try to patch requests session to add Korean headers
-                try:
-                    import requests
-                    original_request = requests.Session.request
-                    
-                    def korean_request(self, method, url, **kwargs):
-                        # Add Korean headers to all requests
-                        if 'headers' not in kwargs:
-                            kwargs['headers'] = {}
-                        kwargs['headers'].update(korean_headers)
-                        return original_request(self, method, url, **kwargs)
-                    
-                    requests.Session.request = korean_request
-                    print(f"  🔧 Patched requests session with Korean headers")
-                except Exception as e:
-                    print(f"  ⚠️  Failed to patch requests: {e}")
-                
+                # Simple request without any manipulation
                 result, continuation_token = reviews(
                     self.app_package,
                     lang='ko',
@@ -135,20 +94,8 @@ class PlayStoreCrawler(BaseCrawler):
                     count=min(count, 200)
                 )
                 
-                # Restore original request method
-                try:
-                    requests.Session.request = original_request
-                except:
-                    pass
-                
-                print(f"  📊 Korean request result - Latest review: {result[0].get('at') if result else 'None'}")
-                print(f"  📦 Korean request count: {len(result)}")
-                
-                # Restore original User-Agent
-                if original_user_agent:
-                    os.environ['USER_AGENT'] = original_user_agent
-                else:
-                    os.environ.pop('USER_AGENT', None)
+                print(f"  📊 Request result - Latest review: {result[0].get('at') if result else 'None'}")
+                print(f"  📦 Request count: {len(result)}")
                 
                 # If we need more reviews and have a continuation token, get more
                 if len(result) < count and continuation_token:
