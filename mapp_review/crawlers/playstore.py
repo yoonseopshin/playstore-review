@@ -37,12 +37,34 @@ class PlayStoreCrawler(BaseCrawler):
         import platform
         import time
         import random
+        import socket
+        import requests
         
         print(f"🖥️  Environment Info:")
         print(f"   • OS: {platform.system()} {platform.release()}")
         print(f"   • Python: {platform.python_version()}")
         print(f"   • Working Directory: {os.getcwd()}")
         print(f"   • User Agent Env: {os.getenv('USER_AGENT', 'Not set')}")
+        
+        # Get IP and location info
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            print(f"   • Hostname: {hostname}")
+            print(f"   • Local IP: {local_ip}")
+            
+            # Get public IP and location
+            try:
+                response = requests.get('https://ipapi.co/json/', timeout=5)
+                if response.status_code == 200:
+                    ip_info = response.json()
+                    print(f"   • Public IP: {ip_info.get('ip', 'Unknown')}")
+                    print(f"   • Location: {ip_info.get('city', 'Unknown')}, {ip_info.get('country_name', 'Unknown')}")
+                    print(f"   • ISP: {ip_info.get('org', 'Unknown')}")
+            except:
+                print(f"   • Public IP: Unable to fetch")
+        except Exception as e:
+            print(f"   • Network info: Error - {e}")
         
         # Check google-play-scraper version
         try:
@@ -63,8 +85,26 @@ class PlayStoreCrawler(BaseCrawler):
                 print(f"  📡 Making request to Google Play Store...")
                 start_time = time.time()
                 
+                # Set a more realistic User-Agent to avoid bot detection
+                import os
+                original_user_agent = os.environ.get('USER_AGENT')
+                os.environ['USER_AGENT'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                
                 # Try to get more recent reviews by using multiple smaller requests
                 print(f"  📡 Making request to Google Play Store (Sort: NEWEST)...")
+                print(f"  🕵️  Using User-Agent: {os.environ.get('USER_AGENT')}")
+                
+                # First try with global settings to get the absolute latest reviews
+                print(f"  🌍 Trying global request first...")
+                global_result, global_token = reviews(
+                    self.app_package,
+                    sort=Sort.NEWEST,
+                    count=50  # Small sample to check latest
+                )
+                
+                print(f"  📊 Global sample - Latest review: {global_result[0].get('at') if global_result else 'None'}")
+                
+                # Then get Korean reviews
                 result, continuation_token = reviews(
                     self.app_package,
                     lang='ko',
@@ -72,6 +112,24 @@ class PlayStoreCrawler(BaseCrawler):
                     sort=Sort.NEWEST,
                     count=min(count, 200)  # Limit initial request to get fresher results
                 )
+                
+                print(f"  📊 Korean sample - Latest review: {result[0].get('at') if result else 'None'}")
+                
+                # If global has much newer reviews, mix them in
+                if global_result and result:
+                    global_latest = global_result[0].get('at')
+                    korean_latest = result[0].get('at')
+                    if global_latest and korean_latest and global_latest > korean_latest:
+                        print(f"  🔄 Global reviews are newer, mixing in top global reviews...")
+                        # Add top 20 global reviews to the beginning
+                        result = global_result[:20] + result
+                        print(f"  📦 Mixed result count: {len(result)}")
+                
+                # Restore original User-Agent
+                if original_user_agent:
+                    os.environ['USER_AGENT'] = original_user_agent
+                else:
+                    os.environ.pop('USER_AGENT', None)
                 
                 # If we need more reviews and have a continuation token, get more
                 if len(result) < count and continuation_token:
