@@ -49,3 +49,25 @@ jobs:
           echo "📦 Python path: $(which python)"
           echo "📦 Installed packages:"
           pip list | grep -E "(google|play|scraper)" || echo "No matching packages"
+
+      - name: Run MAPP Crawler with Debug
+        run: |
+          source venv/bin/activate
+          echo "🚀 Starting MAPP Crawler with enhanced debugging..."
+          echo "📊 Configuration:"
+          echo "   • REVIEW_COUNT: ${REVIEW_COUNT}"
+          echo "   • ANALYSIS_DAYS: ${ANALYSIS_DAYS}"
+          echo "🐍 Using virtual environment: $VIRTUAL_ENV"
+          python -u main.py
+        env:
+          PYTHONUNBUFFERED: 1
+          DEBUG_MODE: 1
+          REVIEW_COUNT: 500
+          ANALYSIS_DAYS: 7
+
+      - name: Rename HTML file to index.html
+        run: |
+          cd ./output
+          cp mapp_report_*.html index.html
+          echo "✓ index.html created from MAPP report"
+          ls -la *.html
