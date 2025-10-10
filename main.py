@@ -37,7 +37,16 @@ def main():
         
         # Step 4: Collect reviews from both platforms
         print("=== Starting mobile app review collection ===")
+        print(f"🔧 Configuration:")
+        print(f"   • Play Store Package: {Config.PLAYSTORE_APP_PACKAGE}")
+        print(f"   • App Store ID: {Config.APPSTORE_APP_ID}")
+        print(f"   • Review Count: {Config.REVIEW_COUNT}")
+        print(f"   • Analysis Days: {Config.DAYS}")
+        
+        print(f"\n🏪 Collecting Play Store reviews...")
         playstore_reviews = playstore_crawler.collect_reviews(Config.REVIEW_COUNT)
+        
+        print(f"\n🍎 Collecting App Store reviews...")
         appstore_reviews = appstore_crawler.collect_reviews()
         
         # Combine results
@@ -50,6 +59,25 @@ def main():
         print(f"   • Google Play Store: {playstore_count} reviews")
         print(f"   • Apple App Store: {appstore_count} reviews")
         print(f"   • Total: {total_count} reviews")
+        
+        # Debug: Show date range of collected reviews
+        if all_reviews:
+            dates = [review.get('at') for review in all_reviews if review.get('at')]
+            if dates:
+                min_date = min(dates)
+                max_date = max(dates)
+                print(f"   • Date range: {min_date.date()} to {max_date.date()}")
+        
+        # Debug: Show sample reviews
+        if playstore_reviews:
+            print(f"\n🔍 Sample Play Store reviews:")
+            for i, review in enumerate(playstore_reviews[:3]):
+                print(f"   {i+1}. {review.get('at', 'No date')} - Score: {review.get('score', 'No score')}")
+        
+        if appstore_reviews:
+            print(f"\n🔍 Sample App Store reviews:")
+            for i, review in enumerate(appstore_reviews[:3]):
+                print(f"   {i+1}. {review.get('at', 'No date')} - Score: {review.get('score', 'No score')}")
         
         # Step 5: Process and filter reviews
         df = review_filter.process_reviews(all_reviews)

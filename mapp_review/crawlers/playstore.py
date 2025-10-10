@@ -18,7 +18,7 @@ class PlayStoreCrawler(BaseCrawler):
     
     def collect_reviews(self, count: int = 100) -> List[Dict]:
         """
-        Collect reviews from Google Play Store
+        Collect reviews from Google Play Store with enhanced debugging
         
         Args:
             count: Number of reviews to collect
@@ -26,42 +26,113 @@ class PlayStoreCrawler(BaseCrawler):
         Returns:
             List of review dictionaries
         """
-        print(f"Fetching reviews from Google Play Store...")
+        print(f"🔍 === PLAY STORE DEBUG INFO ===")
+        print(f"📱 App Package: {self.app_package}")
+        print(f"📊 Requested Count: {count}")
         
+        # Environment debugging
+        import os
+        import platform
+        import time
+        import random
+        
+        print(f"🖥️  Environment Info:")
+        print(f"   • OS: {platform.system()} {platform.release()}")
+        print(f"   • Python: {platform.python_version()}")
+        print(f"   • Working Directory: {os.getcwd()}")
+        print(f"   • User Agent Env: {os.getenv('USER_AGENT', 'Not set')}")
+        
+        # Check google-play-scraper version
         try:
-            result, _ = reviews(
-                self.app_package,
-                lang='ko',
-                country='kr',
-                sort=Sort.NEWEST,
-                count=count
-            )
-            
-            # Standardize format
-            standardized_reviews = []
-            for review in result:
-                # Try multiple version fields
-                version = (review.get('reviewCreatedVersion') or 
-                          review.get('appVersionCode') or 
-                          review.get('appVersionName') or 
-                          'Unknown')
+            import google_play_scraper
+            print(f"   • google-play-scraper version: {google_play_scraper.__version__}")
+        except:
+            print(f"   • google-play-scraper version: Unknown")
+        
+        # Retry mechanism for robustness
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Random delay to avoid rate limiting (longer for retries)
+                delay = random.uniform(1 + attempt * 2, 3 + attempt * 2)
+                print(f"  🔄 Attempt {attempt + 1}/{max_retries}: Waiting {delay:.1f}s before request...")
+                time.sleep(delay)
                 
+                print(f"  📡 Making request to Google Play Store...")
+                start_time = time.time()
                 
-                standardized_reviews.append({
-                    'userName': review.get('userName', 'Anonymous'),
-                    'content': review.get('content', ''),
-                    'score': review.get('score', 0),
-                    'at': review.get('at', datetime.now()),
-                    'platform': self.get_platform_name(),
-                    'version': version
-                })
-            
-            print(f"✓ Fetched {len(standardized_reviews)} reviews from Play Store")
-            return standardized_reviews
-            
-        except Exception as e:
-            print(f"❌ Error fetching Play Store reviews: {e}")
-            return []
+                result, continuation_token = reviews(
+                    self.app_package,
+                    lang='ko',
+                    country='kr',
+                    sort=Sort.NEWEST,
+                    count=count
+                )
+                
+                end_time = time.time()
+                print(f"  ⏱️  Request completed in {end_time - start_time:.2f}s")
+                print(f"  📦 Raw result count: {len(result)}")
+                print(f"  🔗 Continuation token: {'Yes' if continuation_token else 'No'}")
+                
+                # Debug first few reviews
+                if result:
+                    print(f"  🔍 Sample review data:")
+                    sample_review = result[0]
+                    print(f"     • Keys: {list(sample_review.keys())}")
+                    print(f"     • Date: {sample_review.get('at')}")
+                    print(f"     • Content length: {len(sample_review.get('content', ''))}")
+                
+                # Standardize format
+                standardized_reviews = []
+                for i, review in enumerate(result):
+                    # Try multiple version fields
+                    version = (review.get('reviewCreatedVersion') or 
+                              review.get('appVersionCode') or 
+                              review.get('appVersionName') or 
+                              'Unknown')
+                    
+                    standardized_review = {
+                        'userName': review.get('userName', 'Anonymous'),
+                        'content': review.get('content', ''),
+                        'score': review.get('score', 0),
+                        'at': review.get('at', datetime.now()),
+                        'platform': self.get_platform_name(),
+                        'version': version
+                    }
+                    standardized_reviews.append(standardized_review)
+                    
+                    # Debug first few processed reviews
+                    if i < 3:
+                        print(f"     • Review {i+1}: {standardized_review['at']} - Score: {standardized_review['score']}")
+                
+                print(f"✅ Successfully fetched {len(standardized_reviews)} reviews from Play Store")
+                print(f"🔍 === END PLAY STORE DEBUG ===")
+                return standardized_reviews
+                
+            except Exception as e:
+                print(f"❌ Attempt {attempt + 1} failed: {str(e)}")
+                print(f"   Error type: {type(e).__name__}")
+                
+                # Import traceback for detailed error info
+                import traceback
+                print(f"   Traceback: {traceback.format_exc()}")
+                
+                if attempt == max_retries - 1:
+                    print(f"❌ All {max_retries} attempts failed for Play Store reviews")
+                    print(f"❌ This might be due to:")
+                    print(f"   • Rate limiting from Google Play Store")
+                    print(f"   • IP blocking in GitHub Actions environment")
+                    print(f"   • Network connectivity issues")
+                    print(f"   • Changes in Google Play Store API")
+                    print(f"   • Invalid app package: {self.app_package}")
+                    print(f"ℹ️  Continuing with App Store reviews only...")
+                    return []
+                else:
+                    retry_delay = 2 + attempt
+                    print(f"  ⏳ Retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+        
+        return []
     
     def get_platform_name(self) -> str:
         """Get the platform name"""
