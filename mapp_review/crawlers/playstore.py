@@ -149,25 +149,15 @@ class PlayStoreCrawler(BaseCrawler):
                 # Standardize format
                 standardized_reviews = []
                 for i, review in enumerate(sorted_result):
-                    # Try multiple version fields
-                    version = (review.get('reviewCreatedVersion') or 
-                              review.get('appVersionCode') or 
-                              review.get('appVersionName') or 
-                              'Unknown')
-                    
                     standardized_review = {
                         'userName': review.get('userName', 'Anonymous'),
                         'content': review.get('content', ''),
                         'score': review.get('score', 0),
                         'at': review.get('at', datetime.now()),
                         'platform': self.get_platform_name(),
-                        'version': version
+                        'version': review.get('reviewCreatedVersion', 'Unknown')
                     }
                     standardized_reviews.append(standardized_review)
-                    
-                    # Debug first few processed reviews
-                    if i < 5:
-                        print(f"     • Review {i+1}: {standardized_review['at']} - Score: {standardized_review['score']}")
                 
                 print(f"✅ Successfully fetched and sorted {len(standardized_reviews)} reviews from Play Store")
                 print(f"🔍 === END PLAY STORE DEBUG ===")
