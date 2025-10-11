@@ -1,6 +1,6 @@
 """
 Intent Classification for Mobile App Reviews using KoELECTRA
-Optimized for GitHub Actions with 5 predefined categories
+Optimized for GitHub Actions with 4 predefined categories
 """
 import pandas as pd
 import re
@@ -30,10 +30,9 @@ class IntentClassifier:
         self.available = TRANSFORMERS_AVAILABLE
         self.intent_categories = {
             0: '기능 개선 요청',
-            1: '버그 제보', 
-            2: '성능',
-            3: '긍정 피드백',
-            4: '부정 피드백'
+            1: '버그 제보',
+            2: '긍정 피드백',
+            3: '부정 피드백'
         }
         
         self.model = None
@@ -50,11 +49,8 @@ class IntentClassifier:
             '버그 제보': [
                 '버그', '오류', '에러', '문제', '안됨', '안되', '작동', '실행',
                 '튕김', '꺼짐', '멈춤', '느림', '로딩', '접속', '연결',
-                '고장', '이상', '잘못', '수정', '해결'
-            ],
-            '성능': [
-                '느림', '빠름', '속도', '성능', '렉', '끊김', '지연',
-                '로딩', '반응', '처리', '실행', '시간', '빨라', '늦어'
+                '고장', '이상', '잘못', '수정', '해결', '느림', '빠름', '속도', 
+                '성능', '렉', '끊김', '지연', '반응', '처리', '시간', '빨라', '늦어'
             ],
             '긍정 피드백': [
                 '좋다', '좋아', '좋네', '만족', '훌륭', '완벽', '최고', '대박',
@@ -272,8 +268,7 @@ class IntentClassifier:
             # Fixed color mapping for consistent visualization
             intent_color_map = {
                 '기능 개선 요청': '#28a745',
-                '버그 제보': '#dc3545', 
-                '성능': '#ffc107',
+                '버그 제보': '#dc3545',
                 '긍정 피드백': '#17a2b8',
                 '부정 피드백': '#6f42c1'
             }
