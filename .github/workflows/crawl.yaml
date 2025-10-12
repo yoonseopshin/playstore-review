@@ -20,20 +20,15 @@ jobs:
       - name: Debug Environment
         run: |
           echo "🔍 Debugging self-hosted runner environment..."
-          echo "PWD: $(pwd)"
-          echo "USER: $(whoami)"
           echo "Python path: $(which python)"
           echo "Python version: $(python --version)"
           echo "Pip path: $(which pip)"
-          ls -la
           
       - name: Setup Virtual Environment
         run: |
           echo "🐍 Setting up Python virtual environment..."
           python -m venv venv
           source venv/bin/activate
-          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
-          echo "PATH=$VIRTUAL_ENV/bin:$PATH" >> $GITHUB_ENV
           
       - name: Install Dependencies
         run: |
@@ -54,15 +49,9 @@ jobs:
         run: |
           source venv/bin/activate
           echo "🚀 Starting MAPP Crawler with enhanced debugging..."
-          echo "📊 Configuration:"
-          echo "   • REVIEW_COUNT: ${REVIEW_COUNT}"
-          echo "   • ANALYSIS_DAYS: ${ANALYSIS_DAYS}"
-          echo "🐍 Using virtual environment: $VIRTUAL_ENV"
           python -u main.py
         env:
           PYTHONUNBUFFERED: 1
-          DEBUG_MODE: 1
-          REVIEW_COUNT: 500
           ANALYSIS_DAYS: 7
 
       - name: Rename HTML file to index.html

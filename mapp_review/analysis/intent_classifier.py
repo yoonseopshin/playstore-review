@@ -13,8 +13,7 @@ import numpy as np
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 try:
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-    import torch
+    from transformers import AutoTokenizer, pipeline
     # Suppress transformers warnings about uninitialized weights
     import logging
     logging.getLogger("transformers").setLevel(logging.ERROR)
