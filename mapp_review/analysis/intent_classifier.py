@@ -189,7 +189,7 @@ class IntentClassifier:
         intents = []
         confidences = []
         
-        for idx, row in df.iterrows():
+        for count, (idx, row) in enumerate(df.iterrows(), 1):
             review_text = str(row.get('review', ''))
             
             if model_loaded and self.classifier:
@@ -201,8 +201,8 @@ class IntentClassifier:
             confidences.append(confidence)
             
             # Progress indicator for large datasets
-            if (idx + 1) % 10 == 0:
-                print(f"   Processed {idx + 1}/{len(df)} reviews...")
+            if count % 10 == 0:
+                print(f"   Processed {count}/{len(df)} reviews...")
         
         df_classified['intent'] = intents
         df_classified['intent_confidence'] = confidences
